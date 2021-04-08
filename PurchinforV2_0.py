@@ -1,11 +1,14 @@
 import pandas as pd
 
+
+# The inputs file names:
 FolderNameStr = './Purchase_Rawdata/'
 FileNameStr1 = 'ERP2016.xls'
 FileNameStr2 = 'ERP2017.xls'
 FileNameStr3 = 'ERP2018.xls'
 FileNameStr4 = 'ERP2019.xls'
 FileNameStr5 = 'ERP20200101-20201130.xls'
+# The outputs file names:
 FileNameStr_result_byERPnum = 'Purchase_byERPnum_202011.xlsx'
 FileNameStr_result_bySpplier = 'Purchase_bySupplier_202011.xlsx'
 FileNameStr_SpplierSumPrice = 'SupplierSumPrice_202011.xlsx'
