@@ -1,5 +1,6 @@
 # Excel file
-*.elsx
+*.xlsx
+*.xls
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
