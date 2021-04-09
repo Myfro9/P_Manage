@@ -29,6 +29,6 @@
   
   **在文件中Line90修改BOM文件存放的文件夹BOM_FileFolder**
   
-  **修改BOM的层数Line91～Line98**
+  **修改BOM的层数Line91**
   
   **运行程序**
