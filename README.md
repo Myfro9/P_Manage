@@ -32,3 +32,8 @@
   **修改BOM的层数Line91**
   
   **运行程序**
+  
+  ***
+  
+  ![image](https://github.com/Myfro9/P_Manage/blob/Branch1/IMG/chart1.png)
+  
