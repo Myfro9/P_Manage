@@ -25,10 +25,10 @@
   
   **使用方法：**
   
-  **在文件中修改采购统计信息表的文件PriceInfor_FileName的名称**
+  **在文件中Line87修改采购统计信息表的文件PriceInfor_FileName的名称**
   
-  **在文件中修改BOM文件存放的文件夹BOM_FileFolder**
+  **在文件中Line90修改BOM文件存放的文件夹BOM_FileFolder**
   
-  **修改BOM的层数**
+  **修改BOM的层数Line91～Line98**
   
   **运行程序**
