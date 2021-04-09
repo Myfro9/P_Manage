@@ -1,3 +1,10 @@
+# Excel file
+*.xlsx
+*.xls
+
+# Zip file
+*.zip
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
