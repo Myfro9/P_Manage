@@ -22,8 +22,13 @@
 2. Price4BOM_Calc.py
   - ERP_BOM_Calc 函数：对某一个BOM文件进行分析，根据指定的参考价格信息，输出一个名为xxx_Price的价格信息文件，该函数被Calc_Folder函数调用。
   - Calc_Folder 函数： 对某个文件夹下所有指定文件（不包含 _Price）的BOM文件，自动批量计算价格信息。
+  
   **使用方法：**
+  
   **在文件中修改采购统计信息表的文件PriceInfor_FileName的名称**
+  
   **在文件中修改BOM文件存放的文件夹BOM_FileFolder**
+  
   **修改BOM的层数**
+  
   **运行程序**
