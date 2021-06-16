@@ -2,25 +2,27 @@ import pandas as pd
 
 
 # The inputs file names:
-FolderNameStr = './Purchase_Rawdata/'
-FileNameStr1 = 'ERP2016.xls'
+FolderNameStr = './Purchase_Rawdata/采购合同记录/'
+FileNameStr1 = 'ERP20150101-20210420.xls'
+'''FileNameStr1 = 'ERP2016.xls'
 FileNameStr2 = 'ERP2017.xls'
 FileNameStr3 = 'ERP2018.xls'
 FileNameStr4 = 'ERP2019.xls'
-FileNameStr5 = 'ERP20200101-20201130.xls'
+FileNameStr5 = 'ERP20200101-20201130.xls'''''
 # The outputs file names:
-FileNameStr_result_byERPnum = 'Purchase_byERPnum_202011.xlsx'
+Results_FolderNameStr = './Results/'
+FileNameStr_result_byERPnum = 'Purchase_byERPnum_202104.xlsx'
 FileNameStr_result_bySpplier = 'Purchase_bySupplier_202011.xlsx'
 FileNameStr_SpplierSumPrice = 'SupplierSumPrice_202011.xlsx'
-FileNameStr_result_RefPrice_byERPnum = 'RefPrice_byERPnum_202011.xlsx'
+FileNameStr_result_RefPrice_byERPnum = 'RefPrice_byERPnum_202104.xlsx'
 
-xls1 = pd.DataFrame(pd.read_excel(FolderNameStr+FileNameStr1))
-xls2 = pd.DataFrame(pd.read_excel(FolderNameStr+FileNameStr2))
+xls = pd.DataFrame(pd.read_excel(FolderNameStr+FileNameStr1))
+'''xls2 = pd.DataFrame(pd.read_excel(FolderNameStr+FileNameStr2))
 xls3 = pd.DataFrame(pd.read_excel(FolderNameStr+FileNameStr3))
 xls4 = pd.DataFrame(pd.read_excel(FolderNameStr+FileNameStr4))
-xls5 = pd.DataFrame(pd.read_excel(FolderNameStr+FileNameStr5))
+xls5 = pd.DataFrame(pd.read_excel(FolderNameStr+FileNameStr5))'''
 
-xls = pd.concat([xls1,xls2,xls3,xls4,xls5])
+#xls = pd.concat([xls1,xls2,xls3,xls4,xls5])
 
 #result = xls.iloc[:, [1,2,3,4,5,6,7,8,10,12,13]]
 if False : # Re-order the contract record in ERPnum sequence
@@ -35,7 +37,7 @@ if False : # Re-order the contract record in ERPnum sequence
         result_byERPnum = pd.concat([result_byERPnum,result1])
         print(i)
     # result_byERPnum.drop_duplicates('订单编号(cPOID)','first',inplace=True)
-    result_byERPnum.to_excel(FolderNameStr+FileNameStr_result_byERPnum)
+    result_byERPnum.to_excel(Results_FolderNameStr+FileNameStr_result_byERPnum)
 
 if False :  # Re-order the contract record in supplier sequence
     Supplier_counts = xls.iloc[:, 3].value_counts()
@@ -49,11 +51,11 @@ if False :  # Re-order the contract record in supplier sequence
         result_bySupplier = pd.concat([result_bySupplier,result1])
         print('Supplier:',i)
     # result_bySupplier.drop_duplicates('订单编号(cPOID)','first',inplace=True)
-    result_bySupplier.to_excel(FolderNameStr+FileNameStr_result_bySpplier)
+    result_bySupplier.to_excel(Results_FolderNameStr+FileNameStr_result_bySpplier)
 
 
 if False: # Calc total contract price for each supplier
-    xls_bySupplier = pd.DataFrame(pd.read_excel(FolderNameStr+FileNameStr_result_bySpplier))
+    xls_bySupplier = pd.DataFrame(pd.read_excel(Results_FolderNameStr+FileNameStr_result_bySpplier))
     Supplier_sr = xls_bySupplier.iloc[:, 4].value_counts()
     Supplier_pd = pd.DataFrame({'Name': Supplier_sr.index, 'Total Contracts': Supplier_sr.values})
     target = Supplier_pd.iloc[0,0]
@@ -69,7 +71,7 @@ if False: # Calc total contract price for each supplier
         Supplier_pd.iloc[i, 2] = SumPrice
         print('Supplier_sumPrice:',i)
     Supplier_pd.sort_values(by="Total Price",ascending=False,inplace=True)
-    Supplier_pd.to_excel(FolderNameStr+FileNameStr_SpplierSumPrice)
+    Supplier_pd.to_excel(Results_FolderNameStr+FileNameStr_SpplierSumPrice)
 
 def Price_Analy_byERPnum(ERP_pd):
 
@@ -113,7 +115,7 @@ def Price_Analy_byERPnum(ERP_pd):
     return [AvgPrice_byItemNum,Lowest_Price,Warning_Code,Var_pd]
 
 if True:  ## Calculate the ref_price and lowest price according to contract records ordered in ERPnum
-    xls_byERPnum = pd.DataFrame(pd.read_excel(FolderNameStr+FileNameStr_result_byERPnum))
+    xls_byERPnum = pd.DataFrame(pd.read_excel(Results_FolderNameStr+FileNameStr_result_byERPnum))
     list_sr = xls_byERPnum.iloc[:, 6].value_counts()
     ERP_Price_pd = pd.DataFrame({'ERP': list_sr.index, 'Contract Qt': list_sr.values})
     ERP_Price_pd['Ref_UnitPrice'] =0
@@ -131,6 +133,6 @@ if True:  ## Calculate the ref_price and lowest price according to contract reco
         ERP_Price_pd.iloc[i, 4] = Warning_Code
         ERP_Price_pd.iloc[i, 5] = Lowest_Price
 
-    ERP_Price_pd.to_excel(FolderNameStr+FileNameStr_result_RefPrice_byERPnum)
+    ERP_Price_pd.to_excel(Results_FolderNameStr+FileNameStr_result_RefPrice_byERPnum)
 
 print('OK')

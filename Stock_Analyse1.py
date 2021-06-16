@@ -39,7 +39,7 @@ for root, dirs, files in os.walk(BOM_folderNameStr):
         BOM_dir_list = pd.Series(dirs)
     i = i+1
 
-Batch_size = 20
+Batch_size = 1000
 N = math.ceil(pd_StockInfor2.shape[0]/Batch_size)
 
 for k in range(0,N):
