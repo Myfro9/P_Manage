@@ -41,7 +41,8 @@ def ERP_BOM_Calc(ERP_num,BOM_FileFolder,Destination_FileFolder,PriceInfor_Filena
     Sum = BOM_df['总价'].sum()
     BOM_df.loc['总计'] = None
     BOM_df.iloc[BOM_df.shape[0]-1,5] = Sum
-    BOM_df.to_excel(BOM_Price_FileName)
+    BOM_df_sorted = BOM_df.sort_values(by='总价', ascending=False)
+    BOM_df_sorted.to_excel(BOM_Price_FileName)
 
 
     if ERP_num in PriceInfor_L2L3_df.iloc[:,0].values:
@@ -58,6 +59,7 @@ def ERP_BOM_Calc(ERP_num,BOM_FileFolder,Destination_FileFolder,PriceInfor_Filena
         # print(PriceInfor_L2L3_df)
         print(ERP_num,'Price is created in L2L3 Price Information')
 
+
     PriceInfor_L2L3_df.to_excel(PriceInfor_L2L3_Filename)
 
     ## Attach the L2L3 infor:
@@ -65,13 +67,13 @@ def ERP_BOM_Calc(ERP_num,BOM_FileFolder,Destination_FileFolder,PriceInfor_Filena
 
 
 
-def Calc_Folder(BOM_FileFolder,subFolder,PriceInfor_Filename,PriceInfor_L2L3_Filename):
+def Calc_Folder(BOM_FileFolder, Result_FileFolder, subFolder,PriceInfor_Filename,PriceInfor_L2L3_Filename):
     if os.path.exists(BOM_FileFolder+'/'):
-        if not os.path.exists(BOM_FileFolder+'_Price/'):
-            os.makedirs(BOM_FileFolder+'_Price/')
-        if not os.path.exists(BOM_FileFolder + '_Price/'+subFolder):
-            os.makedirs(BOM_FileFolder + '_Price/'+subFolder)
-        Destination_FileFolder = BOM_FileFolder+'_Price/'+subFolder
+        if not os.path.exists(Result_FileFolder+'_Price/'):
+            os.makedirs(Result_FileFolder+'_Price/')
+        if not os.path.exists(Result_FileFolder + '_Price/'+subFolder):
+            os.makedirs(Result_FileFolder + '_Price/'+subFolder)
+        Destination_FileFolder = Result_FileFolder+'_Price/'+subFolder
         for root, dirs, files in os.walk(BOM_FileFolder+'/'+subFolder):
             for file in files:
                 if os.path.splitext(file)[1].lower() == '.xls':
@@ -84,14 +86,16 @@ def Calc_Folder(BOM_FileFolder,subFolder,PriceInfor_Filename,PriceInfor_L2L3_Fil
 
 
 
-PriceInfor_Filename = './Purchase_Rawdata/RefPrice_byERPnum_202011.xlsx'
-PriceInfor_L2L3_Filename ='PriceInfor_L3L2_V3_0.xlsx'
+PriceInfor_Filename = './Results/RefPrice_byERPnum_202104.xlsx'
+PriceInfor_L2L3_Filename ='./Results/PriceInfor_L3L2_V3_0.xlsx'
 
-BOM_FileFolder = './BOM/P0402000212'
-L1_L2_L3_L4 = 3  # Specify the maximum layers in the BOM structure.
+BOM_FileFolder = './BOM/M0106002048'
+Result_FileFolder = './Results/M0106002048'
+
+L1_L2_L3_L4 = 1  # Specify the maximum layers in the BOM structure.
 
 for i in range(L1_L2_L3_L4,0,-1):
     subFolder = 'L'+str(i)+'/'
-    Calc_Folder(BOM_FileFolder, subFolder, PriceInfor_Filename, PriceInfor_L2L3_Filename)
+    Calc_Folder(BOM_FileFolder, Result_FileFolder, subFolder, PriceInfor_Filename, PriceInfor_L2L3_Filename)
 
 
