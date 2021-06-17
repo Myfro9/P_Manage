@@ -308,9 +308,16 @@ pd_Instock_inTask = OnGoing_Prjinfo_Filter(pd_PrjList, pd_InStock,0)
 
 
 #######  导入委外加工出库记录
-
+FolderNameStr = './Purchase_Rawdata/15委外材料出库记录/'
+FileNameStr1 = '委外材料出库单列表20210521.xls'
+pd_OutSourcing = pd.DataFrame(pd.read_excel(FolderNameStr+FileNameStr1))
+pd_OutSourcing_inTask = OnGoing_Prjinfo_Filter(pd_PrjList, pd_OutSourcing,0)
 
 #######  导入委外加工入库记录
+FolderNameStr = './Purchase_Rawdata/16委外产成品入库记录/'
+FileNameStr1 = '委外产成品入库单列表20210521.xls'
+pd_OutSourcingBack = pd.DataFrame(pd.read_excel(FolderNameStr+FileNameStr1))
+pd_OutSourcingBack_inTask = OnGoing_Prjinfo_Filter(pd_PrjList, pd_OutSourcingBack,0)
 
 
 
@@ -331,8 +338,38 @@ pd_Outstock_inTask3 = pd_Outstock_inTask2.groupby('ERP').sum()
 pd_Outstock_inTask3['ERP']= pd_Outstock_inTask3.index
 pd_Outstock_inTask3.index = range(0,pd_Outstock_inTask3.shape[0])
 
-#####  将在产项目的材料出库记录，做退库处理   ---- （ I + II ）
-pd_VirtualStock0 = pd.concat([pd_StockInfor3,pd_Outstock_inTask3])
+##### 整理在产任务单的委外加工出库信息，将相同的ERP编码的库存项进行合并  -----A
+if not pd_OutSourcing_inTask.empty:
+    pd_A_inTask2 = pd_OutSourcing_inTask.loc[:,['材料编码(cInvCode)','数量(iQuantity)']]
+    pd_A_inTask2.columns = ['ERP','Qty']
+    pd_A_inTask3 = pd_A_inTask2.groupby('ERP').sum()
+    pd_A_inTask3['ERP']= pd_A_inTask3.index
+    pd_A_inTask3.index = range(0,pd_A_inTask3.shape[0])
+else:
+    pd_A_inTask3 = pd.DataFrame(columns=['ERP','Qty'])
+
+
+##### 整理在产任务单的委外返回入库信息，将相同的ERP编码的库存项进行合并  -----B
+if not pd_OutSourcingBack_inTask.empty:
+    pd_B_inTask2 = pd_OutSourcingBack_inTask.loc[:,['材料编码(cInvCode)','数量(iQuantity)']]
+    pd_B_inTask2.columns = ['ERP','Qty']
+    pd_B_inTask3 = pd_B_inTask2.groupby('ERP').sum()
+    pd_B_inTask3['ERP']= pd_B_inTask3.index
+    pd_B_inTask3.index = range(0,pd_B_inTask3.shape[0])
+else:
+    pd_B_inTask3 = pd.DataFrame(columns=['ERP', 'Qty'])
+
+##### 整理委外加工但是还没有返回的物料  ----- (A - B)
+pd_B_inTask3['Qty'] = pd_B_inTask3.apply(lambda x: x['Qty']* -1, axis=1)
+pd_OutSoucingNotback0 = pd.concat([pd_A_inTask3,pd_B_inTask3])
+pd_OutSoucingNotback1 = pd_OutSoucingNotback0.groupby('ERP').sum()
+pd_OutSoucingNotback1['ERP']= pd_OutSoucingNotback1.index
+pd_OutSoucingNotback1.index = range(0,pd_OutSoucingNotback1.shape[0])
+
+
+
+#####  将在产项目的材料出库记录，做退库处理   ---- [（ I + II ）+ （A-B）]
+pd_VirtualStock0 = pd.concat([pd_StockInfor3,pd_Outstock_inTask3,pd_OutSoucingNotback1])
 pd_VirtualStock1 = pd_VirtualStock0.groupby('ERP').sum()
 pd_VirtualStock1['ERP'] = pd_VirtualStock1.index
 pd_VirtualStock1.index = range(0,pd_VirtualStock1.shape[0])
@@ -359,7 +396,7 @@ pd_Contract_not_delivered1['ERP']= pd_Contract_not_delivered1.index
 pd_Contract_not_delivered1.index = range(0,pd_Contract_not_delivered1.shape[0])
 
 
-#####  整理虚拟库存 ------- （ I + II ） + （ III - IV ）
+#####  整理虚拟库存 ------- [( I + II ）+ （ A -B ）] + （ III - IV ）
 pd_VirtualStock = pd.concat([pd_VirtualStock1,pd_Contract_not_delivered1]).groupby('ERP').sum()
 pd_VirtualStock['ERP'] = pd_VirtualStock.index
 pd_VirtualStock.index = range(0,pd_VirtualStock.shape[0])
