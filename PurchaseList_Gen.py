@@ -170,11 +170,30 @@ def remove_L2L3L4_andExpandBOM(Top_ERP,BOM_subfolder,Qty,pd_VirtualStock):
     #    for file in files:
     #        pd_BOML1 = pd.DataFrame(pd.read_excel(BOM_subfolder+'L1/'+file))
 
+def remove_L1fromSock(Task_ERP,Qty,pd_VirtualStock):
+    pd_inStock = pd_VirtualStock[pd_VirtualStock.ERP.str.contains(Task_ERP)]
+    if not pd_inStock.empty:
+        Qty_inStock = pd_inStock.iat[0, 0]
+        if Qty_inStock >= Qty:
+            Qty_left =0
+            Qty_inStock_left = Qty_inStock - Qty
+        else:
+            Qty_left = Qty - Qty_inStock
+            Qty_inStock_left = 0
+        pd_VirtualStock.at[pd_inStock.index, 'Qty'] = Qty_inStock_left
+
+    return Qty_left, pd_VirtualStock
+
+
+
+
+
 ### 调用了remove_L2L3L4_andExpandBOM()
 ### 对在产项目列表pd_PrjList中的生产任务单以及数量信息，执行：
-###    1）从BOM和虚拟库存中分别删除库存中所有的L2L3L4层的子部件，
-###    2）对于库存中不够的L2L3L4层子部件，将这些子部件以及对应的不足数量扩展成元器件级别，
-##     3）返回最终需要的（包含多套设备）的元器件总BOM：pd_BOM_needed，以及删除了库存子部件后）剩下的虚拟库存pd_VirtualStock
+###    1） 看看是否有成品库存，并从需求和库存中删除对应的数量
+###    2）从BOM和虚拟库存中分别删除库存中所有的L2L3L4层的子部件，
+###    3）对于库存中不够的L2L3L4层子部件，将这些子部件以及对应的不足数量扩展成元器件级别，
+##     4）返回最终需要的（包含多套设备）的元器件总BOM：pd_BOM_needed，以及删除了库存子部件后）剩下的虚拟库存pd_VirtualStock
 ### 输入参数： folderNameStr是所有BOM文件的存放文件夹'./BOM/'; pd_VirtualStock 是虚拟库存
 def BOM_component_needed_gen(pd_PrjList,folderNameStr,pd_VirtualStock):
     Task_list = pd_PrjList['任务单号']
@@ -183,6 +202,7 @@ def BOM_component_needed_gen(pd_PrjList,folderNameStr,pd_VirtualStock):
     for i in range(0,Task_ERP_list.shape[0]):
         BOM_subfolder = folderNameStr+Task_ERP_list[i]+'/'
         Qty = Task_Qty_list[i]
+        Qty, pd_VirtualStock = remove_L1fromSock(Task_ERP_list[i],Qty,pd_VirtualStock)   ## 看看是否有成品库存，并从需求和库存中删除对应的数量
         if i ==0:
             pd_BOM_needed,pd_VirtualStock= remove_L2L3L4_andExpandBOM(Task_ERP_list[i],BOM_subfolder,Qty,pd_VirtualStock)
             pd_BOM_needed.iloc[:, 2] = Task_list[i]
