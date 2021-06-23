@@ -3,6 +3,11 @@ import os
 import datetime
 import xlwings as xw
 
+## 自动生成询价单，并生成历年采购信息表，用于询价参考
+
+## 输入：缺料表excel，历年采购合同记录excel
+## 输出：询价单excel，历年采购参考信息excel
+
 def ERP_Category_filter(pd_Infor,ERP_Kwd):
     if ERP_Kwd != 'others':
         if '存货编号(cInvCode)' in pd_Infor.columns :
