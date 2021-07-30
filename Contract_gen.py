@@ -5,8 +5,13 @@ import time
 import xlwings as xw
 import shutil
 
-function = 1  # 0: 合同生成； 1：付款单生成
-Target_Task = 'RW202106-E-1'    # 'all' 或者特定生产计划单号
+function = 0  # 0: 合同生成； 1：付款单生成
+VersionCtl =1 # 0: 生成所有项目； 1：之生成对应的Ver
+
+Target_Task = 'GC202106-A'    # 'all' 或者特定生产计划单号
+Ver = 'Ver1'
+
+
 
 ####### 导入询价结果
 FolderNameStr = './Purchase_Rawdata/23询价结果/'
@@ -113,12 +118,16 @@ def my_wbsave(wb_wc, FileNameStr):
 
 #print(int2Chnese(3467))
 TimeStr = time.strftime("%Y-%m-%d", time.localtime(time.time()))
+
+if VersionCtl == 1:
+    pd_Quote_Infor = pd_Quote_Infor[pd_Quote_Infor['Ver']==Ver]
+
 pd_grouped_Quote = pd_Quote_Infor.groupby('生产计划单号')
 
 for item, item_df in pd_grouped_Quote:
     pd_grouped2_Quote = item_df.groupby('渠道')
     task = item
-    if Target_Task == 'all' or Target_Task == task:
+    if Target_Task == 'all' or Target_Task == task :
         if function ==0: #合同生成
             wc = app.books.open(FolderNameStr + FileNameStr_ContractList)   # wc是用于某个生产计划单的合同或付款单信息汇总，wb是用于每一份合同或付款单
         else: # 付款单生成
