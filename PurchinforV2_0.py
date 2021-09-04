@@ -2,21 +2,40 @@ import pandas as pd
 
 
 # The inputs file names:
-FolderNameStr = './Purchase_Rawdata/采购合同记录/'
+FolderNameStr = './Purchase_Rawdata/21采购合同记录/'
 FileNameStr1 = 'ERP20150101-20210420.xls'
 '''FileNameStr1 = 'ERP2016.xls'
 FileNameStr2 = 'ERP2017.xls'
 FileNameStr3 = 'ERP2018.xls'
 FileNameStr4 = 'ERP2019.xls'
-FileNameStr5 = 'ERP20200101-20201130.xls'''''
+FileNameStr5 = 'ERP20200101-20210420.xls'''''
+
 # The outputs file names:
 Results_FolderNameStr = './Results/'
 FileNameStr_result_byERPnum = 'Purchase_byERPnum_202104.xlsx'
 FileNameStr_result_bySpplier = 'Purchase_bySupplier_202011.xlsx'
 FileNameStr_SpplierSumPrice = 'SupplierSumPrice_202011.xlsx'
-FileNameStr_result_RefPrice_byERPnum = 'RefPrice_byERPnum_202104.xlsx'
+FileNameStr_result_RefPrice_byERPnum0 = 'RefPrice_byERPnum_202104.xlsx'
+FileNameStr_result_RefPrice_byERPnum = 'RefPrice_byERPnum.xlsx'
 
 xls = pd.DataFrame(pd.read_excel(FolderNameStr+FileNameStr1))
+
+# 近期询价结果的数据库文件
+FolderNameStr_new = './Purchase_Rawdata/23询价结果/'
+FileNameStr2 = '汇总YF06AB_GC06AB_RW06DEF12G12H1-23-20210902.xlsx'   # 近期询价结果
+FileNameStr3 = '汇总表GC8A-RW8B2-8C-3-20210902.xlsx'                 # 近期询价结果
+### 合并近期询价结果的数据库
+xls1 = pd.DataFrame(pd.read_excel(FolderNameStr_new+FileNameStr2,sheet_name='操作'))
+xls2 = pd.DataFrame(pd.read_excel(FolderNameStr_new+FileNameStr3,sheet_name='操作'))
+xls1 = xls1[xls1['报价数量']>0]
+xls1 = xls1[xls1['小计']>0]
+xls2 = xls2[xls2['报价数量']>0]
+xls2 = xls2[xls2['小计']>0]
+xls_new = pd.concat([xls1,xls2])
+xls_new = xls_new.loc[:,['ERP编码','型号','报价数量','小计','单价（元）']]
+xls_new.columns = ['存货编号(cInvCode)','存货名称(cInvName)','数量(iQuantity)','价税合计(iSum)','原币含税单价(iTaxPrice)']
+
+
 '''xls2 = pd.DataFrame(pd.read_excel(FolderNameStr+FileNameStr2))
 xls3 = pd.DataFrame(pd.read_excel(FolderNameStr+FileNameStr3))
 xls4 = pd.DataFrame(pd.read_excel(FolderNameStr+FileNameStr4))
@@ -101,12 +120,12 @@ def Price_Analy_byERPnum(ERP_pd):
     Bool = ((Var_pd['Var']>0.5) & (Var_pd['Percent'] > 0.1) )
     Warning_Code =0
     if True in Bool.values:
-        print('Warning_Price#1: There is too high contract price for ERP number ', ERP_pd.iloc[0,6])
+        print('Warning_Price#1: There is too high contract price for ERP number ', ERP_pd.iloc[0,0])
         Warning_Code = 1
 
     Bool = ((ERP_pd['Var']<-0.5)& (Var_pd['Percent'] > 0.1) )
     if True in Bool.values :
-        print('Warning_Price#1: There is too low contract price for ERP number ', ERP_pd.iloc[0,6])
+        print('Warning_Price#1: There is too low contract price for ERP number ', ERP_pd.iloc[0,0])
         Warning_Code = 2
 
     Total_ItemNum = Ref_pd['Qt'].sum()
@@ -114,25 +133,60 @@ def Price_Analy_byERPnum(ERP_pd):
     AvgPrice_byItemNum = Total_price / Total_ItemNum
     return [AvgPrice_byItemNum,Lowest_Price,Warning_Code,Var_pd]
 
-if True:  ## Calculate the ref_price and lowest price according to contract records ordered in ERPnum
-    xls_byERPnum = pd.DataFrame(pd.read_excel(Results_FolderNameStr+FileNameStr_result_byERPnum))
-    list_sr = xls_byERPnum.iloc[:, 6].value_counts()
+
+def price_analy(xls_byERPnum):
+    list_sr = xls_byERPnum.loc[:, '存货编号(cInvCode)'].value_counts()
     ERP_Price_pd = pd.DataFrame({'ERP': list_sr.index, 'Contract Qt': list_sr.values})
-    ERP_Price_pd['Ref_UnitPrice'] =0
+    ERP_Price_pd['Ref_UnitPrice'] = 0
     ERP_Price_pd['Name'] = 'Name'
     ERP_Price_pd['Warning_Code'] = 0
     ERP_Price_pd['Lowest_Price'] = 0
-    for i in range(0,ERP_Price_pd.shape[0]):
-#   for i in range(0,20):
-        target = ERP_Price_pd.iloc[i,0]
-        target_pd = xls_byERPnum.loc[xls_byERPnum['存货编号(cInvCode)']==target]
-        [ref_Price,Lowest_Price,Warning_Code,Var_pd] = Price_Analy_byERPnum(target_pd)
-        print(i,'ref_Price is:',ref_Price)
+    for i in range(0, ERP_Price_pd.shape[0]):
+        #   for i in range(0,20):
+        target = ERP_Price_pd.iloc[i, 0]
+        target_pd = xls_byERPnum.loc[xls_byERPnum['存货编号(cInvCode)'] == target]
+        [ref_Price, Lowest_Price, Warning_Code, Var_pd] = Price_Analy_byERPnum(target_pd)
+        print(i, 'ref_Price is:', ref_Price)
         ERP_Price_pd.iloc[i, 2] = ref_Price
-        ERP_Price_pd.iloc[i, 3] = target_pd.iloc[0,7]
+        ERP_Price_pd.iloc[i, 3] = target_pd.iloc[0, 1]
         ERP_Price_pd.iloc[i, 4] = Warning_Code
         ERP_Price_pd.iloc[i, 5] = Lowest_Price
+    return ERP_Price_pd
 
-    ERP_Price_pd.to_excel(Results_FolderNameStr+FileNameStr_result_RefPrice_byERPnum)
+if True:  ## Calculate the ref_price and lowest price according to contract records ordered in ERPnum
+    if False:   ## 重新计算历史采购价格参考信息，因为计算时间比较长，所以存储成文件，不用每次再算
+        xls_byERPnum = pd.DataFrame(pd.read_excel(Results_FolderNameStr+FileNameStr_result_byERPnum))  ## 导入历史采购记录数据库（也是在本程序中处理的结果）
+        xls_byERPnum = xls_byERPnum.loc[:,['存货编号(cInvCode)','存货名称(cInvName)','数量(iQuantity)','价税合计(iSum)','原币含税单价(iTaxPrice)']]
+        ERP_Price_pd_history = price_analy(xls_byERPnum)
+        ERP_Price_pd_history.to_excel(Results_FolderNameStr + FileNameStr_result_RefPrice_byERPnum0)
+
+
+    ERP_Price_pd_history = pd.DataFrame(pd.read_excel(Results_FolderNameStr + FileNameStr_result_RefPrice_byERPnum0))
+    ERP_Price_pd_history.drop(columns=ERP_Price_pd_history.columns[0],axis=1,inplace=True)
+    xls_byERPnum_new = xls_new   ## 导入近期的询价结果数据库
+    ERP_Price_pd_new = price_analy(xls_byERPnum_new)
+
+    ERP_Price_pd_history['history Price'] =0
+    ERP_Price_pd_new['history Price'] = 0
+    for i in range(0,ERP_Price_pd_history.shape[0]):
+        ERP = ERP_Price_pd_history.iloc[i,0]
+        target = ERP_Price_pd_new[ERP_Price_pd_new['ERP'].str.contains(ERP).fillna(False)]
+        if not target.empty:
+            target['history Price'] = ERP_Price_pd_history.iloc[i,2]
+            ERP_Price_pd_history.iloc[i, :] = target.iloc[0,:]
+            ERP_Price_pd_new.drop(index=target.index[0],axis=0,inplace=True)
+
+    if not ERP_Price_pd_new.empty:
+        pd_ERP_Price = pd.concat([ERP_Price_pd_history,ERP_Price_pd_new])
+    else:
+        pd_ERP_Price = ERP_Price_pd_history
+
+    ERP_Price_pd_history.to_excel(Results_FolderNameStr + FileNameStr_result_RefPrice_byERPnum)
+
+
+
+
+
+
 
 print('OK')
