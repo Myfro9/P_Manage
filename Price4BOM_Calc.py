@@ -1,5 +1,7 @@
 import pandas as pd
 import os
+import time
+import shutil
 
 def ERP_BOM_Calc(ERP_num,BOM_FileFolder,Destination_FileFolder,PriceInfor_Filename,PriceInfor_L2L3_Filename):
     BOM_FileName = BOM_FileFolder + ERP_num + '.xls'
@@ -84,18 +86,58 @@ def Calc_Folder(BOM_FileFolder, Result_FileFolder, subFolder,PriceInfor_Filename
 
 
 
+Task = 'P0402000368'   # ERP编码：可以单独输入ERP编码； 'all'： 所有的BOM一起计算
+Version = 1  # 0: only history record ; 1: 包含了近期的采购价格
 
-
-PriceInfor_Filename = './Results/RefPrice_byERPnum_202104.xlsx'
+if Version ==1:
+    PriceInfor_Filename = './Results/RefPrice_byERPnum.xlsx'
+else:
+    PriceInfor_Filename = './Results/RefPrice_byERPnum_202104.xlsx'
 PriceInfor_L2L3_Filename ='./Results/PriceInfor_L3L2_V3_0.xlsx'
+BOM_FileFolder = './BOM/'
+Result_FileFolder0 = './Results/BOM_Price'
+TimeStr = time.strftime("%Y-%m-%d-%H_%M", time.localtime(time.time()))
+Result_FileFolder = Result_FileFolder0 + '/BOM_Price_' + TimeStr
 
-BOM_FileFolder = './BOM/M0106002048'
-Result_FileFolder = './Results/M0106002048'
+assert not os.path.exists(Result_FileFolder), '目标文件夹已经存在了,再等几分钟！'
+os.makedirs(Result_FileFolder)
+ERP = ''
+initial_status = 1
+for root, dirs, files in os.walk(BOM_FileFolder):
+    for file in files:
+        print(root + '/' + file)
+        if file.split('.')[-1].lower() == 'xls' or file.split('.')[-1].lower() == 'xlsx':
+            ERP_tmp = root.split('/')[2]
+            if ERP != ERP_tmp:
+                if initial_status == 0:
+                    L1_L2_L3_L4 = L0
+                    if ERP == Task or Task =='all':
+                        for i in range(L1_L2_L3_L4, 0, -1):
+                            subFolder = 'L' + str(i) + '/'
+                            Calc_Folder(BOM_FileFolder + ERP, Result_FileFolder + '/'+ ERP, subFolder, PriceInfor_Filename,
+                                        PriceInfor_L2L3_Filename)
+                    #print(ERP)
+                    #print(L1_L2_L3_L4)
+                initial_status = 0
+                ERP = ERP_tmp
+                L0 = 1
+                print(ERP_tmp)
+            if root.split('/')[3] == 'L2':
+                if L0 <=2:
+                    L0 = 2
+            elif root.split('/')[3] == 'L3':
+                if L0 <=3:
+                    L0 = 3
+            elif root.split('/')[3] == 'L4':
+                    L0 = 4
+            print(L0)
 
-L1_L2_L3_L4 = 1  # Specify the maximum layers in the BOM structure.
+
+
+'''L1_L2_L3_L4 = 4  # Specify the maximum layers in the BOM structure.
 
 for i in range(L1_L2_L3_L4,0,-1):
     subFolder = 'L'+str(i)+'/'
-    Calc_Folder(BOM_FileFolder, Result_FileFolder, subFolder, PriceInfor_Filename, PriceInfor_L2L3_Filename)
+    Calc_Folder(BOM_FileFolder, Result_FileFolder, subFolder, PriceInfor_Filename, PriceInfor_L2L3_Filename)'''
 
 
