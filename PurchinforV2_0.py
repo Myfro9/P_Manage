@@ -181,7 +181,7 @@ if True:  ## Calculate the ref_price and lowest price according to contract reco
     else:
         pd_ERP_Price = ERP_Price_pd_history
 
-    ERP_Price_pd_history.to_excel(Results_FolderNameStr + FileNameStr_result_RefPrice_byERPnum)
+    pd_ERP_Price.to_excel(Results_FolderNameStr + FileNameStr_result_RefPrice_byERPnum)
 
 
 
