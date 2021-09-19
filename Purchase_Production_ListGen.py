@@ -150,7 +150,7 @@ def Purchase_Production_BOMgen(pd_PrjList,BOM_folderNameStr, Target_folderNameSt
                         if os.path.exists(Result_subfolder + 'L4/'):
                             pd_BOML3 = Check_ChildERP(pd_BOML3, Result_subfolder + 'L4/')
                         pd_BOML3.to_excel(Result_subfolder + 'L3/' + file.lower())
-        # 处理L4目录下的文件
+        # 处理L4_L5目录下的文件
         if os.path.exists(Result_subfolder + 'L4/'):
             clear_ChildERP(Result_subfolder + 'L4/')
             for root, dirs, files in os.walk(Result_subfolder + 'L4/'):
@@ -161,7 +161,24 @@ def Purchase_Production_BOMgen(pd_PrjList,BOM_folderNameStr, Target_folderNameSt
                         pd_BOML4['需新增采购量'] = None
                         pd_BOML4['是否为半成品'] = None
                         pd_BOML4, pd_VirtualStock = Remove_Items_BOMandStock(Task_list[i], file.upper().strip('.XLS'), pd_BOML4, pd_VirtualStock)
+                        if os.path.exists(Result_subfolder + 'L5/'):
+                            pd_BOML4 = Check_ChildERP(pd_BOML4, Result_subfolder + 'L5/')
                         pd_BOML4.to_excel(Result_subfolder + 'L4/' + file.lower())
+
+        # 处理L5目录下的文件
+        if os.path.exists(Result_subfolder + 'L5/'):
+            clear_ChildERP(Result_subfolder + 'L5/')
+            for root, dirs, files in os.walk(Result_subfolder + 'L5/'):
+                for file in files:
+                    if os.path.splitext(file)[1].lower() == '.xls':
+                        xls_df = pd.DataFrame(pd.read_excel(root + file))
+                        pd_BOML5 = xls_df
+                        pd_BOML5['需新增采购量'] = None
+                        pd_BOML5['是否为半成品'] = None
+                        pd_BOML5, pd_VirtualStock = Remove_Items_BOMandStock(Task_list[i],
+                                                                             file.upper().strip('.XLS'),
+                                                                             pd_BOML5, pd_VirtualStock)
+                        pd_BOML5.to_excel(Result_subfolder + 'L5/' + file.lower())
 
     pd_VirtualStock.to_excel(Target_folderNameStr + 'VirtualStock_left'+ '.xls')
     return pd_VirtualStock
