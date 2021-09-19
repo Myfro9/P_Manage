@@ -86,7 +86,7 @@ def Calc_Folder(BOM_FileFolder, Result_FileFolder, subFolder,PriceInfor_Filename
 
 
 
-Task = 'P0402000368'   # ERP编码：可以单独输入ERP编码； 'all'： 所有的BOM一起计算
+Task = 'all'   # ERP编码：可以单独输入ERP编码； 'all'： 所有的BOM一起计算
 Version = 1  # 0: only history record ; 1: 包含了近期的采购价格
 
 if Version ==1:
@@ -108,7 +108,7 @@ for root, dirs, files in os.walk(BOM_FileFolder):
         print(root + '/' + file)
         if file.split('.')[-1].lower() == 'xls' or file.split('.')[-1].lower() == 'xlsx':
             ERP_tmp = root.split('/')[2]
-            if ERP != ERP_tmp:
+            if ERP != ERP_tmp:  ## 进入了一个新的ERP目录，也就是离开老的目录了，那么可以计算老的ERP目录了（此时已经统计了老的ERP目录的深度）
                 if initial_status == 0:
                     L1_L2_L3_L4 = L0
                     if ERP == Task or Task =='all':
@@ -129,7 +129,10 @@ for root, dirs, files in os.walk(BOM_FileFolder):
                 if L0 <=3:
                     L0 = 3
             elif root.split('/')[3] == 'L4':
+                if L0 <= 4:
                     L0 = 4
+            elif root.split('/')[3] == 'L5':
+                    L0 = 5
             print(L0)
 
 
