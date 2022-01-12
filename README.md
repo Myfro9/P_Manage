@@ -33,7 +33,77 @@
   
   **运行程序**
   
-  ***
+  ---
   
   ![image](https://github.com/Myfro9/P_Manage/blob/Branch1/IMG/chart1.png)
+  ---
   
+  # 主要功能
+  ## 更新BOM
+  
+  1. 在 ./BOM_SVN/BOM 目录下从SVN上更新最新的BOM文件
+  2. 直接运行 **BOM_update.py**，读取./BOM_SVN/BOM/下的BOM文件，自动生成L1～L5的等级的BOM
+  
+  ## 生成带价格的BOM
+  运行 **Price4BOM_Calc.py** ， 
+  ## 拉缺料表
+  1. 运行 **Purchase_Production_ListGen.py**，生成缺料表BOM清单Purchase_BOM，运行前需要指定：
+  
+    - BOM的位置
+    BOM_folderNameStr = './BOM.nosync/'
+    
+    - 在调用的 **rd_DataBase.py** 中指定：生产计划单列表，采购信息，库存信息
+    导入在产生产任务单(00):
+    FileNameStr_PrjList = './Purchase_Rawdata/00在产任务单/近期在产生产任务单-2022-good.xls'
+    
+    导入库存信息(11)
+    StockInfor_Filename = './Purchase_Rawdata/11库存记录/ERP现存量20211008.XLS'
+    导入材料入库记录(12)
+    FolderNameStr = './Purchase_Rawdata/12材料入库记录/'
+    FileNameStr_instock = '采购入库单列表20211008.xls'
+    导入材料出库记录(13)
+    FolderNameStr = './Purchase_Rawdata/13材料出库记录/'
+    FileNameStr_outstock = '材料出库单列表20211008.xls'
+    导入委外加工出库记录(15)
+    FolderNameStr = './Purchase_Rawdata/15委外材料出库记录/'
+    FileNameStr_outsourcing = '委外材料出库单列表20211008.xls'
+    导入委外加工入库记录(16)
+    FolderNameStr = './Purchase_Rawdata/16委外产成品入库记录/'
+    FileNameStr_outsourcingBack = '委外产成品入库单20211008.xls'
+    
+    导入所有的采购合同(21)
+    FolderNameStr = './Purchase_Rawdata/21采购合同记录/'
+    FileNameStr_contract = 'ERP20150101-20210420.xls'
+    
+    Contract_FolderNameStr = './Purchase_Rawdata/23询价结果/'
+    Contract_FileNameStr1 = '合并汇总表-版本24-20211230.xlsx'
+    
+  2. 运行 **Quote_gen.py** ，生成询价表，在运行前需要指定：
+    
+    - 缺料表BOM清单，Purchase_BOM
+    FileNameStr = 'PurchaseTable2022-01-12-20_17.xls'
+    FolderNameStr = './Results/PurchaseBOM_2022-01-12-20_17/'
+
+    - 输入需要生成BOM清单的生产计划单号
+    Target = 'RW202201-A-1'
+  
+  ## 自动生成采购合同及付款申请
+  运行 **Contract_gen.py** ,自动生成采购合同和付款申请合同，运行前需要指定：
+    
+    - 询价结果
+    FolderNameStr = './Purchase_Rawdata/23询价结果/'
+    Quote_result = '合并汇总表-版本27-20220110'
+
+    - 供应商信息
+    FolderNameStr = './Purchase_Rawdata/22供应商档案/'
+    FileNameStr = '供应商档案 30-20220106.xlsx'
+
+    - 工艺要求
+    FolderNameStr0 = './Purchase_Rawdata/30工艺要求/'
+    FileNameStr0 = '焊接工艺要求20211105.xls'
+
+    - 需要生成采购合同的生产计划单号列表
+    Tasklist = [...]
+    Verlist = [...]
+    
+
