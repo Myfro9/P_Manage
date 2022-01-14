@@ -34,10 +34,16 @@ def OnGoing_Prjinfo_Filter(pd_PrjList, pd_Infor,mode):
     if mode ==0:
         for i in range(0,Task_list.shape[0]):
             if i ==0:
-                indx=pd_Infor['备注(cMemo)'].str.contains(Task_list.iloc[i]).fillna(False)
+                if '备注(cMemo)' in pd_Infor.columns :
+                    indx=pd_Infor['备注(cMemo)'].str.contains(Task_list.iloc[i]).fillna(False)
+                else:
+                    indx = pd_Infor['备注(cmemo)'].str.contains(Task_list.iloc[i]).fillna(False)
                 pd_Infor_inTask = pd_Infor[indx]
             else:
-                pd_Infor_inTask1 = pd_Infor[pd_Infor['备注(cMemo)'].str.contains(Task_list.iloc[i]).fillna(False)]
+                if '备注(cMemo)' in pd_Infor.columns:
+                    pd_Infor_inTask1 = pd_Infor[pd_Infor['备注(cMemo)'].str.contains(Task_list.iloc[i]).fillna(False)]
+                else:
+                    pd_Infor_inTask1 = pd_Infor[pd_Infor['备注(cmemo)'].str.contains(Task_list.iloc[i]).fillna(False)]
                 pd_Infor_inTask = pd.concat([pd_Infor_inTask,pd_Infor_inTask1])
     else:
         pd_Infor_inTask = pd_Infor[pd_Infor['备注(cMemo)'].isin(Task_list)]
@@ -45,14 +51,15 @@ def OnGoing_Prjinfo_Filter(pd_PrjList, pd_Infor,mode):
 
 def Purchase_Rawdata_analyze():
     #######  导入在产生产任务单， 并整理出对应在产任务单的采购合同
-    FileNameStr_PrjList = './Purchase_Rawdata/00在产任务单/近期在产生产任务单-8-11-good.xls'
+    FileNameStr_PrjList = './Purchase_Rawdata/00在产任务单/近期在产生产任务单-2022-good.xls'
     pd_PrjList = pd.DataFrame(pd.read_excel(FileNameStr_PrjList))
 
     ####### 导入库存信息
     # The file name of stock information
     # StockInfor_Filename = './Purchase_Rawdata/11库存记录/ERP库存表格20210521.XLS'
-    StockInfor_Filename = './Purchase_Rawdata/11库存记录/ERP库存表格20210621.XLS'
+    StockInfor_Filename = './Purchase_Rawdata/11库存记录/ERP现存量20211008.XLS'
     pd_StockInfor = pd.DataFrame(pd.read_excel(StockInfor_Filename))
+
     #StockInfor_pd_byERPNUM = sort_Col_item(StockInfor_pd,2)
     #pd_StockInfor_byERPNUM = sort_Groupby(pd_StockInfor1,'存货编码')
     #pd_StockInfor = pd_StockInfor1
@@ -63,27 +70,30 @@ def Purchase_Rawdata_analyze():
     ####### 导入所有的采购合同
     # FileNameStr_AllContract: The file name of all history purchase contract record
     FolderNameStr = './Purchase_Rawdata/21采购合同记录/'
-    FileNameStr1 = 'ERP20150101-20210420.xls'
-    pd_Contract_Infor0 = pd.DataFrame(pd.read_excel(FolderNameStr+FileNameStr1))
+    FileNameStr_contract = 'ERP20150101-20210420.xls'
+    pd_Contract_Infor0 = pd.DataFrame(pd.read_excel(FolderNameStr+FileNameStr_contract))
     pd_Contract_Infor0 = pd_Contract_Infor0.loc[:,['备注(cMemo)','存货编号(cInvCode)','数量(iQuantity)']]
     #pd_Contract_Infor0.columns = ['Task','ERP','Qty']
 
+    ###### ****************************************************************************** ########
+    ######                                 导入询价结果                                     #######
+    ###### ****************************************************************************** ########
     Contract_FolderNameStr = './Purchase_Rawdata/23询价结果/'
-    Contract_FileNameStr1 = '汇总表GC8A-RW8B2-8C-3-20210902.xlsx'
-    Contract_FileNameStr2 = '汇总YF06AB_GC06AB_RW06DEF12G12H1-23-20210902.xlsx'
+    Contract_FileNameStr1 = '合并汇总表-版本27-20220110.xlsx'
+    Contract_FileNameStr2 = '汇总表2-版本12-20211008.xlsx'   ## 后续不用了
 
     pd_Contract_Infor1 = pd.DataFrame(pd.read_excel(Contract_FolderNameStr + Contract_FileNameStr1,sheet_name='操作'))
     pd_Contract_Infor1 = pd_Contract_Infor1.loc[:,['生产计划单号','ERP编码','报价数量']]
     pd_Contract_Infor1 = pd_Contract_Infor1[pd_Contract_Infor1['报价数量']>0]
     pd_Contract_Infor1.columns = ['备注(cMemo)','存货编号(cInvCode)','数量(iQuantity)']
 
-    pd_Contract_Infor2 = pd.DataFrame(pd.read_excel(Contract_FolderNameStr + Contract_FileNameStr2,sheet_name='操作'))
+    '''pd_Contract_Infor2 = pd.DataFrame(pd.read_excel(Contract_FolderNameStr + Contract_FileNameStr2,sheet_name='操作'))
     pd_Contract_Infor2 = pd_Contract_Infor2.loc[:, ['生产计划单号', 'ERP编码', '报价数量']]
     pd_Contract_Infor2 = pd_Contract_Infor2[pd_Contract_Infor2['报价数量'] > 0]
-    pd_Contract_Infor2.columns = ['备注(cMemo)','存货编号(cInvCode)','数量(iQuantity)']
+    pd_Contract_Infor2.columns = ['备注(cMemo)','存货编号(cInvCode)','数量(iQuantity)']'''
 
-    pd_Contract_Infor = pd.concat([pd_Contract_Infor0,pd_Contract_Infor1,pd_Contract_Infor2])
-
+    #pd_Contract_Infor = pd.concat([pd_Contract_Infor0,pd_Contract_Infor1,pd_Contract_Infor2])
+    pd_Contract_Infor = pd.concat([pd_Contract_Infor0, pd_Contract_Infor1])
 
     #xls = pd.concat([xls1,xls2,xls3,xls4,xls5])
     #xls.to_excel('./Purchase_Rawdata/results/Contracts2016-202011.xlsx')
@@ -95,16 +105,16 @@ def Purchase_Rawdata_analyze():
     #######  导入材料出库记录，并整理出对应在产任务单的材料出库记录
     # FileNameStr_Outstock: The file name of all history Out stock record
     FolderNameStr = './Purchase_Rawdata/13材料出库记录/'
-    FileNameStr1 = '材料出库单列表20210621.xls'
-    pd_OutStock = pd.DataFrame(pd.read_excel(FolderNameStr+FileNameStr1))
+    FileNameStr_outstock = '材料出库单列表20211008.xls'
+    pd_OutStock = pd.DataFrame(pd.read_excel(FolderNameStr+FileNameStr_outstock))
     pd_Outstock_inTask = OnGoing_Prjinfo_Filter(pd_PrjList, pd_OutStock,0)
 
 
     #######  导入材料入库记录，并整理出对应在产任务单的材料入库记录
     # FileNameStr_Instock: The file name of all history In stock record
     FolderNameStr = './Purchase_Rawdata/12材料入库记录/'
-    FileNameStr1 = '采购入库单列表20210621.xls'
-    pd_InStock = pd.DataFrame(pd.read_excel(FolderNameStr+FileNameStr1))
+    FileNameStr_instock = '采购入库单列表20211008.xls'
+    pd_InStock = pd.DataFrame(pd.read_excel(FolderNameStr+FileNameStr_instock))
     pd_Instock_inTask = OnGoing_Prjinfo_Filter(pd_PrjList, pd_InStock,0)
 
     #######  导入产成品入库记录
@@ -115,14 +125,14 @@ def Purchase_Rawdata_analyze():
 
     #######  导入委外加工出库记录
     FolderNameStr = './Purchase_Rawdata/15委外材料出库记录/'
-    FileNameStr1 = '委外材料出库单列表20210621.xls'
-    pd_OutSourcing = pd.DataFrame(pd.read_excel(FolderNameStr+FileNameStr1))
+    FileNameStr_outsourcing = '委外材料出库单列表20211008.xls'
+    pd_OutSourcing = pd.DataFrame(pd.read_excel(FolderNameStr+FileNameStr_outsourcing))
     pd_OutSourcing_inTask = OnGoing_Prjinfo_Filter(pd_PrjList, pd_OutSourcing,0)
 
     #######  导入委外加工入库记录
     FolderNameStr = './Purchase_Rawdata/16委外产成品入库记录/'
-    FileNameStr1 = '委外产成品入库单列表20210621.xls'
-    pd_OutSourcingBack = pd.DataFrame(pd.read_excel(FolderNameStr+FileNameStr1))
+    FileNameStr_outsourcingBack = '委外产成品入库单20211008.xls'
+    pd_OutSourcingBack = pd.DataFrame(pd.read_excel(FolderNameStr+FileNameStr_outsourcingBack))
     pd_OutSourcingBack_inTask = OnGoing_Prjinfo_Filter(pd_PrjList, pd_OutSourcingBack,0)
 
 
@@ -206,7 +216,8 @@ def Purchase_Rawdata_analyze():
     pd_VirtualStock = pd.concat([pd_VirtualStock1,pd_Contract_not_delivered1]).groupby('ERP').sum()
     pd_VirtualStock['ERP'] = pd_VirtualStock.index
     pd_VirtualStock.index = range(0,pd_VirtualStock.shape[0])
-    return pd_VirtualStock,pd_PrjList
+    return pd_VirtualStock,pd_PrjList,FileNameStr_PrjList,StockInfor_Filename,FileNameStr_contract,\
+           Contract_FileNameStr1,Contract_FileNameStr2,FileNameStr_outstock,FileNameStr_instock,FileNameStr_outsourcing,FileNameStr_outsourcingBack
 
 def main():
     pd_VirtualStock, pd_PrjList = Purchase_Rawdata_analyze()

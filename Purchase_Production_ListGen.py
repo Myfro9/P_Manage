@@ -20,6 +20,8 @@ def Remove_Items_BOMandStock(Prj,Parent_ERP,pd_BOM,pd_VirtualStock):
             Qty_inStock = pd_inStock.iat[0, 0]
             tst = pd_VirtualStock[pd_VirtualStock.ERP.str.contains(ERP).fillna(False)]
             tst2 = pd_BOM[pd_BOM.loc[:, '子件编码(cpscode)'].str.contains(ERP).fillna(False)]
+            #if Qty_inStock == '5,365.00':
+            #    print(num)
             if Qty_inStock >= num:
                 pd_VirtualStock.at[tst.index, 'Qty'] = tst.iat[0, 0] - num
                 pd_BOM.at[tst2.index, '需新增采购量'] = 0
@@ -100,7 +102,7 @@ def Purchase_Production_BOMgen(pd_PrjList,BOM_folderNameStr, Target_folderNameSt
         Result_subfolder = Target_folderNameStr + Task_list[i] + '/'
         Qty = Task_Qty_list[i]
         # 根据生产计划单号以及对应的产品ERP编码，在Result目录下建立相应的目录，并将BOM文件列表复制过去
-        assert os.path.exists(BOM_subfolder), 'Can not find BOM folder ! '
+        assert os.path.exists(BOM_subfolder), 'Can not find BOM folder ：{} '.format(BOM_subfolder)
         assert not os.path.exists(Result_subfolder), '目标文件夹已经存在了,再等几分钟！'
         shutil.copytree(BOM_subfolder, Result_subfolder)
         # 处理L1_L2目录下的文件
@@ -220,16 +222,33 @@ def PurchaseTable_Gen(pd_PrjList,pd_VirtualStock,Target_folderNameStr):
     return pd_PurchaseTable
 
 def main():
-    pd_VirtualStock,pd_PrjList = rd_DataBase.Purchase_Rawdata_analyze()
-    pd_VirtualStock['Comments'] = None
-    BOM_folderNameStr = './BOM/'
+
     TimeStr = time.strftime("%Y-%m-%d-%H_%M", time.localtime(time.time()))
+    Target_folderNameStr = './results/' + 'PurchaseBOM_' + TimeStr + '/'
+
+    pd_VirtualStock,pd_PrjList,FileNameStr_PrjList,StockInfor_Filename,FileNameStr_contract,\
+           Contract_FileNameStr1,Contract_FileNameStr2,FileNameStr_outstock,FileNameStr_instock,\
+           FileNameStr_outsourcing,FileNameStr_outsourcingBack = rd_DataBase.Purchase_Rawdata_analyze()
+
+
+    pd_VirtualStock['Comments'] = None
+    BOM_folderNameStr = './BOM.nosync/'
     #TimeStr = '2021-06-18-19_18'  # debug
-    Target_folderNameStr = './results/' + 'PurchaseBOM_' + TimeStr +'/'
+
     pd_VirtualStock1 = Purchase_Production_BOMgen(pd_PrjList, BOM_folderNameStr, Target_folderNameStr, pd_VirtualStock)
     pd_PurchaseTable = PurchaseTable_Gen(pd_PrjList,pd_VirtualStock1,Target_folderNameStr)
     pd_PurchaseTable1 = pd_PurchaseTable[pd_PurchaseTable['需新增采购量'] >0]
     pd_PurchaseTable1.to_excel(Target_folderNameStr + 'PurchaseTable' + TimeStr  + '.xls')
+    f = open(Target_folderNameStr + 'PurchaseBOM_inforlog.txt', 'w')
+    print('在产任务单列表：' + FileNameStr_PrjList + '\n', file=f)
+    print('库存列表：' + StockInfor_Filename + '\n', file=f)
+    print('历史采购合同列表：' + FileNameStr_contract + '\n', file=f)
+    print('新增采购合同列表1：' + Contract_FileNameStr1 + '\n', file=f)
+    print('新增采购合同列表2：' + Contract_FileNameStr2 + '\n', file=f)
+    print('出库信息：' + FileNameStr_outstock + '\n', file=f)
+    print('入库信息：' + FileNameStr_instock + '\n', file=f)
+    print('委外信息：' + FileNameStr_outsourcing + '\n', file=f)
+    print('委外返回信息：' + FileNameStr_outsourcingBack + '\n', file=f)
 
 if __name__ == "__main__":
     main()
