@@ -29,7 +29,7 @@
   
   **在文件中Line90修改BOM文件存放的文件夹BOM_FileFolder**
   
-  **修改BOM的层数Line91**
+  **可以自动分析BOM的层数，最大支持L5**
   
   **运行程序**
   
@@ -38,15 +38,23 @@
   ![image](https://github.com/Myfro9/P_Manage/blob/Branch1/IMG/chart1.png)
   ---
   
-  # 主要功能
-  ## 更新BOM
+# 主要功能
+## 更新BOM
   
   1. 在 ./BOM_SVN/BOM 目录下从SVN上更新最新的BOM文件
   2. 直接运行 **BOM_update.py**，读取./BOM_SVN/BOM/下的BOM文件，自动生成L1～L5的等级的BOM
   
-  ## 生成带价格的BOM
-  运行 **Price4BOM_Calc.py** ， 
-  ## 拉缺料表
+## 生成带价格的BOM
+  运行 **Price4BOM_Calc.py** ， 计算./BOM.nosync/下的所有BOM的参考成本。运行前需要指定所有物料的历史采购参考价格
+  
+    Version = 1  # 0: only history record ; 1: 包含了近期的采购价格
+    if Version ==1:
+        PriceInfor_Filename = './Results/RefPrice_byERPnum.xlsx'  # 包含历史以及近期的采购信息
+    else:
+        PriceInfor_Filename = './Results/RefPrice_byERPnum_202104.xlsx'  # 仅历史采购信息
+    PriceInfor_L2L3_Filename ='./Results/PriceInfor_L3L2_V3_0.xlsx'
+  
+## 拉缺料表
   1. 运行 **Purchase_Production_ListGen.py**，生成缺料表BOM清单Purchase_BOM，运行前需要指定：
   
     - BOM的位置
@@ -87,8 +95,10 @@
     - 输入需要生成BOM清单的生产计划单号
     Target = 'RW202201-A-1'
   
-  ## 自动生成采购合同及付款申请
+## 自动生成采购合同及付款申请
   运行 **Contract_gen.py** ,自动生成采购合同和付款申请合同，运行前需要指定：
+  
+    - 在'./PurchaseBOM_询价表_log.xlsx' 中，手动填写生产计划单对应的PurchaseBOM以及询价表的目录信息
     
     - 询价结果
     FolderNameStr = './Purchase_Rawdata/23询价结果/'
@@ -106,4 +116,25 @@
     Tasklist = [...]
     Verlist = [...]
     
+## 采购到货进度跟踪 
+运行 **Schedule_gen.py** ，根据缺料表BOM清单和采购询价结果、采购到货信息等跟踪每一颗物料的到货情况
+如果某个半成品的物料已经到齐，会在"生产任务派单表xxx.xlxs"中提示该半成品的物料都已经到齐
+在运行前需要指定：
 
+    -指定采购询价结果，（其中包含了合同、付款信息）
+    FolderNameStr_quote = './Purchase_Rawdata/23询价结果/'
+    FileNameStr_quote = '合并汇总表-版本19-20211222.xlsx'
+    
+    -在产生产任务单
+    FileNameStr_PrjList = './Purchase_Rawdata/00在产任务单/近期在产生产任务单-8-11-good.xls'
+
+    -导入采购到货记录
+    FolderNameStr = './Purchase_Rawdata/24采购到货记录/'
+    FileNameStr = '2021ERP到货单-20211210.xls'
+    
+    -导入供应商信息
+    FolderNameStr = './Purchase_Rawdata/22供应商档案/'
+    FileNameStr = '供应商档案 24-20211115.xlsx'
+    
+    -指定生产计划单号
+    pd_Task = pd.DataFrame({'Task':[...] })
