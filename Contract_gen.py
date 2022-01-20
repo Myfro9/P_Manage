@@ -4,6 +4,9 @@ import datetime
 import time
 import xlwings as xw
 import shutil
+import collections
+from pandas.api.types import is_datetime64_any_dtype as is_datetime
+#import Schedule_gen
 
 
 
@@ -68,6 +71,8 @@ def check_supplier_vld(pd_item2):
 
 def my_wbsave(wb_wc, FileNameStr):
     #wb.save(FolderNameStr_result + task + '付款单/' + FileNameStr_result_payment)
+    #if not os.path.exists(FileNameStr):
+    #    os.makedirs(FileNameStr)
     wb_wc.save('./results/temp_result.xlsx')
     shutil.copyfile('./results/temp_result.xlsx',FileNameStr)
 
@@ -161,6 +166,7 @@ def PurchaseContract_gen(Target_Task,pd_Quote_Infor,pd_Supplier_Infor,
                     for i in range(item2_df.shape[0]):  ## for 每个生产计划单的每一个供应商对应的多个物料：
                         ERP = pd_Quote_Infor.loc[item2_df.index[i],'ERP编码']
                         Type = pd_Quote_Infor.loc[item2_df.index[i],'型号']
+                        Type2 = pd_Quote_Infor.loc[item2_df.index[i],'规格']
                         Class = pd_Quote_Infor.loc[item2_df.index[i],'供应商类别']
                         num = pd_Quote_Infor.loc[item2_df.index[i],'报价数量']
                         unit_price = pd_Quote_Infor.loc[item2_df.index[i], '单价（元）']
@@ -204,6 +210,7 @@ def PurchaseContract_gen(Target_Task,pd_Quote_Infor,pd_Supplier_Infor,
                                     ws_sheet0.range('H5').value = task
 
                                     ws_sheet0.range('B12').value = Type
+                                    ws_sheet0.range('C12').value = Type2
                                     ws_sheet0.range('D12').value = ERP
                                     ws_sheet0.range('E12').value = num
                                     ws_sheet0.range('F12').value = unit_price
@@ -242,6 +249,7 @@ def PurchaseContract_gen(Target_Task,pd_Quote_Infor,pd_Supplier_Infor,
                                 if function == 0:  # 合同生成
                                     idx = 12+i
                                     ws_sheet0.range('B'+str(idx)).value = Type
+                                    ws_sheet0.range('C' + str(idx)).value = Type2
                                     ws_sheet0.range('D'+str(idx)).value = ERP
                                     ws_sheet0.range('E'+str(idx)).value = num
                                     ws_sheet0.range('F'+str(idx)).value = unit_price
@@ -415,9 +423,13 @@ def PurchaseContract_gen(Target_Task,pd_Quote_Infor,pd_Supplier_Infor,
             ###  存储合同和付款单统计清单
             if function ==0:
                 #wc.save(FolderNameStr_result + task + '合同/'+ task + '_ContractList.xlsx')
+                if not os.path.exists(FolderNameStr_result + task + pre_Ver + '合同/'):
+                    os.makedirs(FolderNameStr_result + task + pre_Ver + '合同/')
                 my_wbsave(wc, FolderNameStr_result + task + pre_Ver+'合同/'+ task + pre_Ver + 'ContractList.xlsx')
             else:
                 #wc.save(FolderNameStr_result + task + '付款单/' + task + '_PaymentList.xlsx')
+                if not os.path.exists(FolderNameStr_result + task + pre_Ver + '付款单/'):
+                    os.makedirs(FolderNameStr_result + task + pre_Ver + '付款单/')
                 my_wbsave(wc, FolderNameStr_result + task + pre_Ver+'付款单/' + task + pre_Ver+'PaymentList.xlsx')
             wc.close()
         else:
@@ -471,15 +483,15 @@ def OutsourcingContract_gen(Target_Task,pd_Quote_Infor,pd_Supplier_Infor,
                     print('Warning: 供应商{}采购量为空,跳过'.format(supplier_kwd))
                 else:
                     if function == 0: # 合同生成
-                        assert item2_df.shape[0] < 11, '委外加工列表太长，超过10条了！'
+                        assert item2_df.shape[0] < 11+5, '委外加工列表太长，超过15条了！'
                         wb = app.books.open(FolderNameStr + FileNameStr_OutsourcingContract)
                         ws_sheet0 = wb.sheets[0]
                         #ws_sheet1 = wb.sheets[1]
-                        offset = 0
+                        offset = 15    # offset 是模版大于10的部分长度
                     else: # 付款单生成
                         wb = app.books.open(FolderNameStr + FileNameStr_Pyament)
                         ws_sheet0 = wb.sheets[0]
-                        offset = 0
+                        offset = 15
                     supplier_infor = supplier_infor.iloc[0,:]
                     payment_infor = supplier_infor['账期']
                     for i in range(item2_df.shape[0]):  ## for 每个生产计划单的每一个供应商对应的多个物料：
@@ -522,18 +534,18 @@ def OutsourcingContract_gen(Target_Task,pd_Quote_Infor,pd_Supplier_Infor,
 
                                     ws_sheet0.range('H6').value =  TimeStr
                                     ws_sheet0.range('B7').value = infor0
-                                    ws_sheet0.range('E'+str(72+offset)).value = infor1
+                                    ws_sheet0.range('E'+str(72+5+5)).value = infor1
                                     ws_sheet0.range('B8').value = infor2
-                                    ws_sheet0.range('E'+str(74+offset)).value = infor3
-                                    ws_sheet0.range('E'+str(75+offset)).value = infor4
-                                    ws_sheet0.range('E'+str(76+offset)).value = infor5
+                                    ws_sheet0.range('E'+str(74+5+5)).value = infor3
+                                    ws_sheet0.range('E'+str(75+5+5)).value = infor4
+                                    ws_sheet0.range('E'+str(76+5+5)).value = infor5
                                     ws_sheet0.range('H5').value = task
 
                                     ws_sheet0.range('B12').value = Type
-                                    ws_sheet0.range('B27').value = Type
+                                    ws_sheet0.range('B'+str(27+5)).value = Type
                                     ws_sheet0.range('D12').value = ERP
-                                    ws_sheet0.range('C27').value = ERP
-                                    ws_sheet0.range('D27').value = Tech_str
+                                    ws_sheet0.range('C'+str(27+5)).value = ERP
+                                    ws_sheet0.range('D'+str(27+5)).value = Tech_str
                                     ws_sheet0.range('E12').value = num
                                     ws_sheet0.range('F12').value = unit_price
                                     ws_sheet0.range('G12').value = total_price
@@ -571,11 +583,11 @@ def OutsourcingContract_gen(Target_Task,pd_Quote_Infor,pd_Supplier_Infor,
                                 if function == 0:  # 合同生成
                                     idx = 12+i
                                     ws_sheet0.range('B'+str(idx)).value = Type
-                                    ws_sheet0.range('B' + str(idx+15)).value = Type
+                                    ws_sheet0.range('B' + str(idx+15+5)).value = Type
 
                                     ws_sheet0.range('D'+str(idx)).value = ERP
-                                    ws_sheet0.range('C' + str(idx+15)).value = ERP
-                                    ws_sheet0.range('D' + str(idx+15)).value = Tech_str
+                                    ws_sheet0.range('C' + str(idx+15+5)).value = ERP
+                                    ws_sheet0.range('D' + str(idx+15+5)).value = Tech_str
 
                                     ws_sheet0.range('E'+str(idx)).value = num
                                     ws_sheet0.range('F'+str(idx)).value = unit_price
@@ -612,9 +624,9 @@ def OutsourcingContract_gen(Target_Task,pd_Quote_Infor,pd_Supplier_Infor,
 
                     ### 下面对每个合同内的表格做一个统计汇总
                     if function ==0:  # 合同生成
-                        sumed_price =ws_sheet0.range('G'+str(22+offset)).value
+                        sumed_price =ws_sheet0.range('G'+str(22+5)).value
                         sumed_price_Chinese = int2Chnese(int(sumed_price))
-                        ws_sheet0.range('A'+str(22+offset)).value = '以上单价含13%增值税，大写金额：'+ sumed_price_Chinese + '元整'
+                        ws_sheet0.range('A'+str(22+5+5)).value = '以上单价含13%增值税，大写金额：'+ sumed_price_Chinese + '元整'
                         # 交期
                         if str(Class) == 'mechanic':
                             deliverTime = 21
@@ -622,33 +634,33 @@ def OutsourcingContract_gen(Target_Task,pd_Quote_Infor,pd_Supplier_Infor,
                             deliverTime =14
                         # 帐期
                         if payment_infor == '预付30%+票到30天':
-                            ws_sheet0.range('B'+str(54+offset)).value = '30%预付款，货到票到30天月结'
+                            ws_sheet0.range('B'+str(54+5)).value = '30%预付款，货到票到30天月结'
                             ws_sheet0.range('H12').value = '预付款后'+ str(deliverTime) + '天'
-                            ws_sheet0.range('B' + str(48 + offset)).value = '预付款后'+ str(deliverTime) + '天发货'
+                            ws_sheet0.range('B' + str(48 + 5)).value = '预付款后'+ str(deliverTime) + '天发货'
                         elif payment_infor == '款到发货':
-                            ws_sheet0.range('B'+str(54+offset)).value = '款到发货'
+                            ws_sheet0.range('B'+str(54+5)).value = '款到发货'
                             ws_sheet0.range('H12').value = '款到发货'
-                            ws_sheet0.range('B' + str(48 + offset)).value = '款到发货'
+                            ws_sheet0.range('B' + str(48 + 5)).value = '款到发货'
                         elif payment_infor == '票到30天':
-                            ws_sheet0.range('B'+str(54+offset)).value = '货到票到30天月结'
+                            ws_sheet0.range('B'+str(54+5)).value = '货到票到30天月结'
                             ws_sheet0.range('H12').value = '合同签订后' + str(deliverTime) + '天'
-                            ws_sheet0.range('B' + str(48 + offset)).value = '合同签订后' + str(deliverTime) + '天发货'
+                            ws_sheet0.range('B' + str(48 + 5)).value = '合同签订后' + str(deliverTime) + '天发货'
                         elif payment_infor == '货到付款':
-                            ws_sheet0.range('B'+str(54+offset)).value = '货到付款'
+                            ws_sheet0.range('B'+str(54+5)).value = '货到付款'
                             ws_sheet0.range('H12').value = '合同签订后' + str(deliverTime) + '天'
-                            ws_sheet0.range('B' + str(48 + offset)).value = '合同签订后' + str(deliverTime) + '天发货'
+                            ws_sheet0.range('B' + str(48 + 5)).value = '合同签订后' + str(deliverTime) + '天发货'
                         elif payment_infor == '预付30 %，付清尾款发货':
-                            ws_sheet0.range('B' + str(54 + offset)).value = '预付30 %，付清尾款发货'
+                            ws_sheet0.range('B' + str(54 + 5)).value = '预付30 %，付清尾款发货'
                             ws_sheet0.range('H12').value = '预付款后' + str(deliverTime) + '天'
-                            ws_sheet0.range('B' + str(48 + offset)).value = '预付款后' + str(deliverTime) + '天发货'
+                            ws_sheet0.range('B' + str(48 + 5)).value = '预付款后' + str(deliverTime) + '天发货'
                         elif payment_infor == '月结30天':
-                            ws_sheet0.range('B' + str(54 + offset)).value = '货到月结30天'
+                            ws_sheet0.range('B' + str(54 + 5)).value = '货到月结30天'
                             ws_sheet0.range('H12').value = '合同签订后' + str(deliverTime) + '天'
-                            ws_sheet0.range('B' + str(48 + offset)).value = '合同签订后' + str(deliverTime) + '天发货'
+                            ws_sheet0.range('B' + str(48 + 5)).value = '合同签订后' + str(deliverTime) + '天发货'
                         else:
-                            ws_sheet0.range('B'+str(54+offset)).value = '货到月结'
+                            ws_sheet0.range('B'+str(54+5)).value = '货到月结'
                             ws_sheet0.range('H12').value = '合同签订后' + str(deliverTime) + '天'
-                            ws_sheet0.range('B' + str(48 + offset)).value = '合同签订后' + str(deliverTime) + '天发货'
+                            ws_sheet0.range('B' + str(48 + 5)).value = '合同签订后' + str(deliverTime) + '天发货'
 
 
 
@@ -670,7 +682,7 @@ def OutsourcingContract_gen(Target_Task,pd_Quote_Infor,pd_Supplier_Infor,
                         my_wbsave(wb, FolderNameStr_result + task + pre_Ver+ '合同/'+ FileNameStr_result)
 
                         #### 在合同统计清单中加上一条
-                        wc_sheet0.range('E'+str(6+j)).value = ws_sheet0.range('G'+str(22+offset)).value  #合同金额
+                        wc_sheet0.range('E'+str(6+j)).value = ws_sheet0.range('G'+str(22+5)).value  #合同金额
                         wc_sheet0.range('B' + str(6 + j)).value = supplier_infor['供应商名称']            # 供应商名称
                         wc_sheet0.range('F' + str(6 + j)).value = ws_sheet0.range('H12').value  # 付款方式
                         if item2_df.shape[0] >1:
@@ -759,7 +771,7 @@ def OutsourcingContract_gen(Target_Task,pd_Quote_Infor,pd_Supplier_Infor,
 
     app.quit()
 
-def Quote_infor_Clasify(pd_Quote_Infor):
+def Quote_infor_Clasify(pd_Quote_Infor):  # 区分是采购询价信息还是加工询价信息
     pd_Quote_Infor_purchase = pd_Quote_Infor[~pd_Quote_Infor['ERP编码'].str.contains('H').fillna(False)]
     pd_Quote_Infor_purchase.index = range(pd_Quote_Infor_purchase.shape[0])
     pd_Quote_Outsourcing = pd_Quote_Infor[pd_Quote_Infor['ERP编码'].str.contains('H').fillna(False)]
@@ -767,16 +779,114 @@ def Quote_infor_Clasify(pd_Quote_Infor):
     #print('test')
     return pd_Quote_Infor_purchase,pd_Quote_Outsourcing
 
+def Clean_Quote_info(pd_QuoteInfo,pd_Supplier_Infor):
+    pd_QuoteInfo.index = range(pd_QuoteInfo.shape[0])
+    idx = pd_QuoteInfo.index
+    for i in range(pd_QuoteInfo.shape[0]):
+        ERP = pd_QuoteInfo.loc[idx[i], 'ERP编码']
+        Task = pd_QuoteInfo.loc[idx[i], '生产计划单号']
+        Supplier = pd_QuoteInfo.loc[idx[i], '渠道']
+        if str(Task) in str(Supplier):
+            #print('Warning # 0: 生产任务单 ', Task,' 中 ',ERP, ' 的供应商是自己，死循环！！')
+            pd_QuoteInfo.drop(index=idx[i],axis=0,inplace=True)
+    pd_QuoteInfo.index = range(pd_QuoteInfo.shape[0])
+    key_list = ['RW', 'YF', 'GC']
+    for i in range(pd_QuoteInfo.shape[0]):
+        ERP = pd_QuoteInfo.loc[idx[i], 'ERP编码']
+        Task = pd_QuoteInfo.loc[idx[i], '生产计划单号']
+        Supplier = str(pd_QuoteInfo.loc[idx[i], '渠道'])
+        if any(key in str(Supplier) for key in key_list):   ## 当合并采购任务到其它生产计划单的情况，确保其它生产计划中有该ERP编码的采购信息
+            Task_others = pd_QuoteInfo.loc[pd_QuoteInfo.index[i],'渠道']
+            Target =  pd_QuoteInfo[(pd_QuoteInfo['生产计划单号'] == Task_others) & (pd_QuoteInfo['ERP编码'] == ERP)]
+            if Target.empty:
+                print('Error #3-1 : 在生产计划单',Task,' 和',Task_others,' 中，都没有ERP编码：',ERP,' 的采购信息！\n' )
+                pd_QuoteInfo.loc[idx[i], '渠道']='nan'
+        else:
+            if not (('苏州全波' in Supplier) or (Supplier == 'nan') or ('特殊采购' in Supplier)):
+                pd_Supplier_Target = pd_Supplier_Infor[pd_Supplier_Infor['供应商名称']==Supplier]
+                if pd_Supplier_Target.empty:
+                    #print('Error #4 : 供应商档案中没有 ',Supplier,' 的信息！\n')
+                    pd_QuoteInfo.loc[idx[i], '渠道']='nan'
+
+    pd_QuoteInfo.index = range(pd_QuoteInfo.shape[0])
+    return pd_QuoteInfo
+
+def Check_quote_info(pd_Quote_Infor,pd_Supplier_Infor):
+    #pd_Quote_Infor = Schedule_gen.Clean_Quote_info(pd_Quote_Infor)
+    f = open('Quote_errlog.txt', 'w')
+    Err =0
+
+    ## 检查询价信息表
+    key_list = ['RW', 'YF', 'GC']
+    clm = pd_Quote_Infor.columns
+    #print(clm[1:11].values)
+    if pd_Quote_Infor.shape[1] < 11 or collections.Counter(clm[1:11].values) != collections.Counter(['生产计划单号','ERP编码','型号','需求数量','供应商类别','报价数量','单价（元）','小计','渠道','Ver']):
+        Err =1
+        print('Error #1 : 询价结果的列格式不对\n',file=f)
+    for i in range(pd_Quote_Infor.shape[0]):
+        Task = pd_Quote_Infor.loc[pd_Quote_Infor.index[i],'生产计划单号']
+        ERP = pd_Quote_Infor.loc[pd_Quote_Infor.index[i], 'ERP编码']
+        Supplier = str(pd_Quote_Infor.loc[pd_Quote_Infor.index[i], '渠道'])
+        if Task == pd_Quote_Infor.loc[pd_Quote_Infor.index[i],'渠道']:   ## 避免合并采购的生产任务单号指向自己
+            print('Error #2 : 对于',ERP,'生产计划单',Task,'的供应商指向自己，死循环\n',file=f)
+            Err =1
+
+        elif any(key in str(Supplier) for key in key_list):   ## 当合并采购任务到其它生产计划单的情况，确保其它生产计划中有该ERP编码的采购信息
+            Task_others = pd_Quote_Infor.loc[pd_Quote_Infor.index[i],'渠道']
+
+            Target =  pd_Quote_Infor[(pd_Quote_Infor['生产计划单号'] == Task_others) & (pd_Quote_Infor['ERP编码'] == ERP)]
+            if Target.empty:
+                print('Error #3-1 : 在生产计划单',Task,' 和',Task_others,' 中，都没有ERP编码：',ERP,' 的采购信息！\n',file=f )
+                Err =1
+            else:
+                if Target.shape[0]>1:
+                    Target_sr = Target['Ver'].value_counts()
+                    #print(len(Target_sr))
+                    if len(Target_sr) != Target.shape[0]:
+                        print('Error #3-2 : 在生产计划单',Task_others,' 中，有多条ERP编码：',ERP,' 的采购信息！\n',file=f)
+                        Err =1
+                else:
+                    if any(key in Target['渠道'] for key in key_list):
+                        print('Error #3-3 : 在生产计划单', Task, ' 的合并采购生产计划单', Task_others, ' 中，', ERP, '仍然指向其它的生产任务单！\n',file=f)
+                        Err = 1
+        else:
+            if not (('苏州全波' in Supplier) or (Supplier == 'nan') or ('特殊采购' in Supplier)):
+                pd_Supplier_Target = pd_Supplier_Infor[pd_Supplier_Infor['供应商名称']==Supplier]
+                if pd_Supplier_Target.empty:
+                    print('Error #4 : 供应商档案中没有 ',Supplier,' 的信息！\n',file=f)
+                    Err =1
+
+    ## 下面检查供应商信息表
+    Item_Counts = pd_Supplier_Infor['供应商名称'].value_counts()
+    pd_Supplier_Counts = pd.DataFrame({'col1': Item_Counts.index, 'col2':Item_Counts.values})
+    pd_Supplier_Counts = pd_Supplier_Counts[pd_Supplier_Counts['col2']>1]
+    payment_key_list = ['票到30天', '月结30天', '款到发货', '预付30%+票到30天', '货到付款', '预付50%货款，付清尾款发货。', '预付30%，付清尾款发货',
+                        '预付50%货款，尾款根据项目背靠背支付。', '预付50%，尾款月结30天','其他']
+    if not pd_Supplier_Counts.empty:
+        for i in range(pd_Supplier_Counts.shape[0]):
+            print('Error #5 : 供应商档案中，', pd_Supplier_Counts.iloc[i,0],'有',pd_Supplier_Counts.iloc[i,1],'条信息 \n',file=f)
+            Err =1
+
+    for i in range(pd_Supplier_Infor.shape[0]):
+        Supplier = str(pd_Supplier_Infor.loc[pd_Supplier_Infor.index[i],'供应商名称']).strip()
+        Payment_Infor = str(pd_Supplier_Infor.loc[pd_Supplier_Infor.index[i],'账期']).strip()
+        if not any(key == Payment_Infor for key in payment_key_list):
+            if Payment_Infor != 'nan':
+                print('Error #6 : 供应商档案中，',Supplier, ' 的付款方式为：' , Payment_Infor, ' ，不符合规定！\n',file=f)
+
+    sr_Contract_time = pd.to_datetime(pd_Quote_Infor['盖章日期'])
+    if not is_datetime(sr_Contract_time):
+        Err = 1
+        print('Error #7 : 合同盖章日期应该为日期格式 \n',file=f)
+    return Err
+
 
 def main():
-    VersionCtl = 1  # 0: 生成整个项目的合同； 1：之生成对应的Ver
 
-    Target_Task = 'RW202106-D'  # 'all' 或者特定生产计划单号,可以包含关系
-    Ver = 'Ver2'
 
     ####### 导入询价结果
     FolderNameStr = './Purchase_Rawdata/23询价结果/'
-    Quote_result = '汇总表1-版本29-20210910'
+    Quote_result = '合并汇总表-版本31-20220120A'
 
     FileNameStr = Quote_result + '.xlsx'
     pd_Quote_Infor = pd.DataFrame(pd.read_excel(FolderNameStr + FileNameStr, sheet_name='操作'))
@@ -786,12 +896,12 @@ def main():
 
     ####### 导入供应商信息
     FolderNameStr = './Purchase_Rawdata/22供应商档案/'
-    FileNameStr = '供应商档案 18-20210917.xlsx'
+    FileNameStr = '供应商档案 31-20220117.xlsx'
     pd_Supplier_Infor = pd.DataFrame(pd.read_excel(FolderNameStr + FileNameStr))
 
     ####### 导入工艺文件
     FolderNameStr0 = './Purchase_Rawdata/30工艺要求/'
-    FileNameStr0 = '焊接工艺要求.xlsx'
+    FileNameStr0 = '焊接工艺要求20220120B.xls'
 
     ####### 打开合同模版
     FolderNameStr = './Purchase_Rawdata/'
@@ -814,41 +924,71 @@ def main():
 
     TimeStr = time.strftime("%Y-%m-%d", time.localtime(time.time()))
 
-    pd_Quote_Infor_purchase,pd_Quote_Infor_Outsourcing = Quote_infor_Clasify(pd_Quote_Infor)
-    if not pd_Quote_Infor_purchase.empty:
-        function = 0  # 采购合同生成
-        PurchaseContract_gen(Target_Task,pd_Quote_Infor_purchase,pd_Supplier_Infor,
-                     FolderNameStr, FileNameStr_ContractList, FileNameStr_PyamentList,
-                     FileNameStr_Contract0, FileNameStr_Contract1, FileNameStr_Contract2,
-                     FileNameStr_Pyament, FileNameStr_Pyament1, FileNameStr_Pyament2,
-                     FolderNameStr_result,
-                     TimeStr, VersionCtl, Ver, function)
-        function = 1  # 采购付款单生成
-        PurchaseContract_gen(Target_Task, pd_Quote_Infor_purchase, pd_Supplier_Infor,
-                     FolderNameStr, FileNameStr_ContractList, FileNameStr_PyamentList,
-                     FileNameStr_Contract0, FileNameStr_Contract1, FileNameStr_Contract2,
-                     FileNameStr_Pyament, FileNameStr_Pyament1, FileNameStr_Pyament2,
-                     FolderNameStr_result,
-                     TimeStr, VersionCtl, Ver, function)
+    pd_Quote_Infor = Clean_Quote_info(pd_Quote_Infor,pd_Supplier_Infor)
+    Err = Check_quote_info(pd_Quote_Infor,pd_Supplier_Infor)
 
-    if not pd_Quote_Infor_Outsourcing.empty:
-        function = 0  # 委外合同生成
-        OutsourcingContract_gen(Target_Task, pd_Quote_Infor_Outsourcing, pd_Supplier_Infor,
-                                FolderNameStr, FileNameStr_ContractList, FileNameStr_PyamentList,
-                                FileNameStr_OutsourcingContract,
-                                FileNameStr_Pyament,
-                                FolderNameStr_result,
-                                FolderNameStr0+FileNameStr0,
-                                TimeStr, VersionCtl, Ver, function)
+    #Tasklist = ['RW202107-C','RW202107-D','RW202108-B-4','RW202111-A','RW202111-B','RW202111-C','RW202111-E','RW202111-F','RW202111-G','RW202111-H']
+    #Tasklist = ['RW202111-I-1']
+    #Tasklist = ['YF202110-A','RW202107-B-1','RW202108-A-1','RW202108-B-4','RW202108-D-1','RW202111-I','RW202111-A']
+    Tasklist = [
+                 'RW202201-A-1',
 
-        function = 1  # 委外付款单生成
-        OutsourcingContract_gen(Target_Task, pd_Quote_Infor_Outsourcing, pd_Supplier_Infor,
-                                FolderNameStr, FileNameStr_ContractList, FileNameStr_PyamentList,
-                                FileNameStr_OutsourcingContract,
-                                FileNameStr_Pyament,
-                                FolderNameStr_result,
-                                FolderNameStr0 + FileNameStr0,
-                                TimeStr, VersionCtl, Ver, function)
+        ]
+
+    Verlist = [
+        4
+    ]   # 0: 没有Version
+
+    for i in range(len(Tasklist)):
+
+        if Verlist[i] ==0:
+            VersionCtl = 0  # 0: 生成整个项目的合同； 1：之生成对应的Ver
+        else:
+            VersionCtl = 1
+        Ver = 'Ver'+str(Verlist[i])
+
+        Target_Task = Tasklist[i]  # 'all' 或者特定生产计划单号,可以包含关系
+
+
+        if Err ==1:
+            print('询价信息表 或 供应商档案 有错误，具体查阅Quote_errlog.txt !')
+        else:
+            pd_Quote_Infor_purchase,pd_Quote_Infor_Outsourcing = Quote_infor_Clasify(pd_Quote_Infor)  # 将询价结果拆分成采购和委外加工
+
+            if not pd_Quote_Infor_purchase.empty:
+                function = 0  # 采购合同生成
+                PurchaseContract_gen(Target_Task,pd_Quote_Infor_purchase,pd_Supplier_Infor,
+                             FolderNameStr, FileNameStr_ContractList, FileNameStr_PyamentList,
+                             FileNameStr_Contract0, FileNameStr_Contract1, FileNameStr_Contract2,
+                             FileNameStr_Pyament, FileNameStr_Pyament1, FileNameStr_Pyament2,
+                             FolderNameStr_result,
+                             TimeStr, VersionCtl, Ver, function)
+                function = 1  # 采购付款单生成
+                PurchaseContract_gen(Target_Task, pd_Quote_Infor_purchase, pd_Supplier_Infor,
+                             FolderNameStr, FileNameStr_ContractList, FileNameStr_PyamentList,
+                             FileNameStr_Contract0, FileNameStr_Contract1, FileNameStr_Contract2,
+                             FileNameStr_Pyament, FileNameStr_Pyament1, FileNameStr_Pyament2,
+                             FolderNameStr_result,
+                             TimeStr, VersionCtl, Ver, function)
+
+            if not pd_Quote_Infor_Outsourcing.empty:
+                function = 0  # 委外合同生成
+                OutsourcingContract_gen(Target_Task, pd_Quote_Infor_Outsourcing, pd_Supplier_Infor,
+                                        FolderNameStr, FileNameStr_ContractList, FileNameStr_PyamentList,
+                                        FileNameStr_OutsourcingContract,
+                                        FileNameStr_Pyament1,
+                                        FolderNameStr_result,
+                                        FolderNameStr0+FileNameStr0,
+                                        TimeStr, VersionCtl, Ver, function)
+
+                function = 1  # 委外付款单生成
+                OutsourcingContract_gen(Target_Task, pd_Quote_Infor_Outsourcing, pd_Supplier_Infor,
+                                        FolderNameStr, FileNameStr_ContractList, FileNameStr_PyamentList,
+                                        FileNameStr_OutsourcingContract,
+                                        FileNameStr_Pyament1,
+                                        FolderNameStr_result,
+                                        FolderNameStr0 + FileNameStr0,
+                                        TimeStr, VersionCtl, Ver, function)
 
 if __name__ == "__main__":
         main()
