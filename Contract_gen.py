@@ -886,7 +886,7 @@ def main():
 
     ####### 导入询价结果
     FolderNameStr = './Purchase_Rawdata/23询价结果/'
-    Quote_result = '合并汇总表-版本31-20220120A'
+    Quote_result = '合并汇总表-版本40-20220210'
 
     FileNameStr = Quote_result + '.xlsx'
     pd_Quote_Infor = pd.DataFrame(pd.read_excel(FolderNameStr + FileNameStr, sheet_name='操作'))
@@ -896,12 +896,12 @@ def main():
 
     ####### 导入供应商信息
     FolderNameStr = './Purchase_Rawdata/22供应商档案/'
-    FileNameStr = '供应商档案 31-20220117.xlsx'
+    FileNameStr = '供应商档案 35-20220209.xlsx'
     pd_Supplier_Infor = pd.DataFrame(pd.read_excel(FolderNameStr + FileNameStr))
 
     ####### 导入工艺文件
     FolderNameStr0 = './Purchase_Rawdata/30工艺要求/'
-    FileNameStr0 = '焊接工艺要求20220120B.xls'
+    FileNameStr0 = '焊接工艺要求20220210.xls'
 
     ####### 打开合同模版
     FolderNameStr = './Purchase_Rawdata/'
@@ -931,12 +931,32 @@ def main():
     #Tasklist = ['RW202111-I-1']
     #Tasklist = ['YF202110-A','RW202107-B-1','RW202108-A-1','RW202108-B-4','RW202108-D-1','RW202111-I','RW202111-A']
     Tasklist = [
-                 'RW202201-A-1',
-
+                  'RW202201-A-2',
+                  'RW202201-A-3',
+                  'RW202201-A-4',
+                  'RW202201-A-8',
+                  'RW202201-B-1',
+                  'RW202201-B-2',
+                  'RW202201-B-3',
+                  'RW202201-C-2',
+                  'RW202201-C-3',
+                  'RW202201-C-6',
+                  'RW202201-D'
         ]
 
     Verlist = [
-        4
+        8,
+        7,
+        5,
+        3,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+
     ]   # 0: 没有Version
 
     for i in range(len(Tasklist)):
