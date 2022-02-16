@@ -90,7 +90,7 @@ def PurchaseContract_gen(Target_Task,pd_Quote_Infor,pd_Supplier_Infor,
                  FileNameStr_Contract0,FileNameStr_Contract1,FileNameStr_Contract2,
                  FileNameStr_Pyament,FileNameStr_Pyament1,FileNameStr_Pyament2,
                  FolderNameStr_result,
-                 TimeStr,VersionCtl,Ver,function):   # funciton: 0: 合同生成； 1：付款单生成
+                 TimeStr,VersionCtl,Ver,function,function2):   # funciton: 0: 合同生成； 1：付款单生成 ；function2：0:普通订单； 1：海华订单（新的付款方式，小于2万付全款，否则30%预付，70%尾款）
     app = xw.App(visible=False, add_book=False)
     app.display_alerts = False
     app.screen_updating = False  # 是否实时刷新excel程序的显示内容
@@ -163,6 +163,8 @@ def PurchaseContract_gen(Target_Task,pd_Quote_Infor,pd_Supplier_Infor,
 
                     supplier_infor = supplier_infor.iloc[0,:]
                     payment_infor = supplier_infor['账期']
+
+                    sum_total_price =0
                     for i in range(item2_df.shape[0]):  ## for 每个生产计划单的每一个供应商对应的多个物料：
                         ERP = pd_Quote_Infor.loc[item2_df.index[i],'ERP编码']
                         Type = pd_Quote_Infor.loc[item2_df.index[i],'型号']
@@ -171,6 +173,7 @@ def PurchaseContract_gen(Target_Task,pd_Quote_Infor,pd_Supplier_Infor,
                         num = pd_Quote_Infor.loc[item2_df.index[i],'报价数量']
                         unit_price = pd_Quote_Infor.loc[item2_df.index[i], '单价（元）']
                         total_price = pd_Quote_Infor.loc[item2_df.index[i], '小计']
+                        sum_total_price = total_price + sum_total_price
                         if num != None and str(num) != 'nan' and num > 0:
                             if i ==0:
                                 if function == 0:  # 合同生成
@@ -216,6 +219,7 @@ def PurchaseContract_gen(Target_Task,pd_Quote_Infor,pd_Supplier_Infor,
                                     ws_sheet0.range('F12').value = unit_price
                                     ws_sheet0.range('G12').value = total_price
                                     ws_sheet0.range('H12').value = ' '
+
                                 else: # 付款单生成
                                     infor0 =  supplier_infor['供应商名称']
                                     if str(supplier_infor['开户行']) != 'nan' :
@@ -262,20 +266,19 @@ def PurchaseContract_gen(Target_Task,pd_Quote_Infor,pd_Supplier_Infor,
                                         deliverTime = 14
                                     # 帐期
                                     if payment_infor == '预付30%+票到30天':
-                                        ws_sheet0.range('H'+str(idx)).value = '预付款后' + str(deliverTime) + '天'
+                                        ws_sheet0.range('H' + str(idx)).value = '预付款后' + str(deliverTime) + '天'
                                     elif payment_infor == '款到发货':
-                                        ws_sheet0.range('H'+str(idx)).value = '款到发货'
+                                        ws_sheet0.range('H' + str(idx)).value = '款到发货'
                                     elif payment_infor == '票到30天':
-                                        ws_sheet0.range('H'+str(idx)).value = '合同签订后' + str(deliverTime) + '天'
+                                        ws_sheet0.range('H' + str(idx)).value = '合同签订后' + str(deliverTime) + '天'
                                     elif payment_infor == '货到付款':
-                                        ws_sheet0.range('H'+str(idx)).value = '合同签订后' + str(deliverTime) + '天'
+                                        ws_sheet0.range('H' + str(idx)).value = '合同签订后' + str(deliverTime) + '天'
                                     elif payment_infor == '预付30 %，付清尾款发货':
-                                        ws_sheet0.range('H'+str(idx)).value = '预付款后' + str(deliverTime) + '天'
+                                        ws_sheet0.range('H' + str(idx)).value = '预付款后' + str(deliverTime) + '天'
                                     elif payment_infor == '月结30天':
-                                        ws_sheet0.range('H'+str(idx)).value = '合同签订后' + str(deliverTime) + '天'
+                                        ws_sheet0.range('H' + str(idx)).value = '合同签订后' + str(deliverTime) + '天'
                                     else:
-                                        ws_sheet0.range('H'+str(idx)).value = '合同签订后' + str(deliverTime) + '天'
-
+                                        ws_sheet0.range('H' + str(idx)).value = '合同签订后' + str(deliverTime) + '天'
 
                                 else: # 付款单生成
                                     idx = 8+i
@@ -283,6 +286,24 @@ def PurchaseContract_gen(Target_Task,pd_Quote_Infor,pd_Supplier_Infor,
                                     ws_sheet0.range('B'+str(idx)).value = num
                                     ws_sheet0.range('C'+str(idx)).value = unit_price
                                     ws_sheet0.range('E'+str(idx)).value = total_price
+                    if function2 == 1:
+                        if function ==0 :  # 合同生成
+                            for i in range(item2_df.shape[0]):  ## for 每个生产计划单的每一个供应商对应的多个物料：
+                                idx = 12 + i
+                                Class = pd_Quote_Infor.loc[item2_df.index[i], '供应商类别']
+                                # 交期
+                                if str(Class) == 'mechanic':
+                                    deliverTime = 21
+                                else:
+                                    deliverTime = 14
+                                if sum_total_price < 20000:
+                                    ws_sheet0.range('H' + str(idx)).value = '款到发货'
+                                elif payment_infor != '款到发货':
+                                    ws_sheet0.range('H' + str(idx)).value = '预付款后' + str(deliverTime) + '天'
+
+
+
+
 
                     ### 下面对每个合同内的表格做一个统计汇总
                     if function ==0:  # 合同生成
@@ -319,12 +340,21 @@ def PurchaseContract_gen(Target_Task,pd_Quote_Infor,pd_Supplier_Infor,
                             ws_sheet0.range('B' + str(42 + offset)).value = '货到月结30天'
                             ws_sheet0.range('H12').value = '合同签订后' + str(deliverTime) + '天'
                             ws_sheet0.range('B' + str(36 + offset)).value = '合同签订后' + str(deliverTime) + '天发货'
+
                         else:
                             ws_sheet0.range('B'+str(42+offset)).value = '货到月结'
                             ws_sheet0.range('H12').value = '合同签订后' + str(deliverTime) + '天'
                             ws_sheet0.range('B' + str(36 + offset)).value = '合同签订后' + str(deliverTime) + '天发货'
 
-
+                        if function2 == 1:
+                            if sum_total_price < 20000:
+                                ws_sheet0.range('B' + str(42 + offset)).value = '款到发货'
+                                ws_sheet0.range('H12').value = '款到发货'
+                                ws_sheet0.range('B' + str(36 + offset)).value = '款到发货'
+                            elif payment_infor != '款到发货':
+                                ws_sheet0.range('B' + str(42 + offset)).value = '30%预付款，货到票到月结'
+                                ws_sheet0.range('H12').value = '预付款后' + str(deliverTime) + '天'
+                                ws_sheet0.range('B' + str(36 + offset)).value = '预付款后' + str(deliverTime) + '天发货'
 
 
                         if str(Class) == 'nan' :
@@ -371,6 +401,7 @@ def PurchaseContract_gen(Target_Task,pd_Quote_Infor,pd_Supplier_Infor,
                             os.rename(FolderNameStr_result + task + pre_Ver+'付款单/'+ FileNameStr_result_payment,FolderNameStr_result + task + pre_Ver+'付款单/'+ FileNameStr_result_payment_old)
 
                         needPay =0
+
                         if payment_infor == '预付30%+票到30天':
                             ws_sheet0.range('C' + str(29 + offset)).value = '30%预付款'
                             ws_sheet0.range('F' + str(29 + offset)).value = int(ws_sheet0.range('F' + str(18 + offset)).value) * 0.3
@@ -392,10 +423,30 @@ def PurchaseContract_gen(Target_Task,pd_Quote_Infor,pd_Supplier_Infor,
                             my_wbsave(wb, FolderNameStr_result + task + pre_Ver+'付款单/'+ FileNameStr_result_payment)
                             print(task + '_' + item2 + '======需要30%预付款，且全款发货')
                             needPay = 1
+
                         else:
                             print(task + '_' + item2 + '不需要预付款')
                             k = k-1
+                        if function2 == 1:
+                            if sum_total_price < 20000:
+                                ws_sheet0.range('C' + str(29 + offset)).value = '全款，款到发货'
+                                ws_sheet0.range('F' + str(29 + offset)).value = ws_sheet0.range(
+                                    'F' + str(18 + offset)).value
+                                # wb.save(FolderNameStr_result + task + '付款单/'+ FileNameStr_result_payment)
+                                my_wbsave(wb,
+                                          FolderNameStr_result + task + pre_Ver + '付款单/' + FileNameStr_result_payment)
+                                print(task + '_' + item2 + '=====需要付全款')
+                                needPay = 1
 
+                            elif payment_infor != '款到发货':
+                                ws_sheet0.range('C' + str(29 + offset)).value = '30%预付款'
+                                ws_sheet0.range('F' + str(29 + offset)).value = int(
+                                    ws_sheet0.range('F' + str(18 + offset)).value) * 0.3
+                                # wb.save(FolderNameStr_result + task + '付款单/'+ FileNameStr_result_payment)
+                                my_wbsave(wb,
+                                          FolderNameStr_result + task + pre_Ver + '付款单/' + FileNameStr_result_payment)
+                                print(task + '_' + item2 + '=====需要30%预付款')
+                                needPay = 1
 
                         #### 在付款统计清单里加上一条
                         if needPay ==1:
@@ -418,7 +469,149 @@ def PurchaseContract_gen(Target_Task,pd_Quote_Infor,pd_Supplier_Infor,
 
                     wb.close()
 
+                    # 对于需要尾款支付的项目，再次打开付款模版并生成尾款付款单
+                    if function == 1:
+                        if item2_df.shape[0] < 11:
+                            wb = app.books.open(FolderNameStr + FileNameStr_Pyament)
+                            ws_sheet0 = wb.sheets[0]
+                            offset = 0
+                        elif item2_df.shape[0] < 26:
+                            wb = app.books.open(FolderNameStr + FileNameStr_Pyament1)
+                            ws_sheet0 = wb.sheets[0]
+                            offset = 15
+                        else:
+                            wb = app.books.open(FolderNameStr + FileNameStr_Pyament2)
+                            ws_sheet0 = wb.sheets[0]
+                            offset = 50
+                        assert item2_df.shape[0]<61 , '付款列表太长，超过50条了！'
 
+                        #supplier_infor = supplier_infor.iloc[0, :]
+                        #payment_infor = supplier_infor['账期']
+
+                        sum_total_price = 0
+                        for i in range(item2_df.shape[0]):  ## for 每个生产计划单的每一个供应商对应的多个物料：
+                            ERP = pd_Quote_Infor.loc[item2_df.index[i], 'ERP编码']
+                            Type = pd_Quote_Infor.loc[item2_df.index[i], '型号']
+                            Type2 = pd_Quote_Infor.loc[item2_df.index[i], '规格']
+                            Class = pd_Quote_Infor.loc[item2_df.index[i], '供应商类别']
+                            num = pd_Quote_Infor.loc[item2_df.index[i], '报价数量']
+                            unit_price = pd_Quote_Infor.loc[item2_df.index[i], '单价（元）']
+                            total_price = pd_Quote_Infor.loc[item2_df.index[i], '小计']
+                            sum_total_price = total_price + sum_total_price
+                            if num != None and str(num) != 'nan' and num > 0:
+                                if i == 0:
+                                    infor0 = supplier_infor['供应商名称']
+                                    if str(supplier_infor['开户行']) != 'nan':
+                                        infor5 = str(supplier_infor['开户行'])
+                                    else:
+                                        infor5 = '需补充对方开户行信息'
+
+                                    if str(supplier_infor['账号']) != 'nan':
+                                        infor6 = str(supplier_infor['账号'])
+                                    else:
+                                        infor6 = ''
+
+                                    ws_sheet0.range('A' + str(30 + offset)).value = infor0
+                                    ws_sheet0.range('A' + str(31 + offset)).value = infor5
+                                    ws_sheet0.range('A' + str(32 + offset)).value = infor6
+                                    ws_sheet0.range('D' + str(29 + offset)).value = TimeStr
+                                    ws_sheet0.range('C' + str(35 + offset)).value = task
+                                    if 'RW' in task:
+                                        ws_sheet0.range('C' + str(34 + offset)).value = '计划部生产计划单'
+                                    elif 'YF' in task:
+                                        ws_sheet0.range('C' + str(34 + offset)).value = '计划部研发计划单'
+                                    elif 'GC' in task:
+                                        ws_sheet0.range('C' + str(34 + offset)).value = '工程部工程计划单'
+                                    else:
+                                        ws_sheet0.range('C' + str(34 + offset)).value = ''
+                                    ws_sheet0.range('A8').value = Type
+                                    ws_sheet0.range('B8').value = num
+                                    ws_sheet0.range('C8').value = unit_price
+                                    ws_sheet0.range('E8').value = total_price
+                                else:
+
+                                    idx = 8 + i
+                                    ws_sheet0.range('A' + str(idx)).value = Type
+                                    ws_sheet0.range('B' + str(idx)).value = num
+                                    ws_sheet0.range('C' + str(idx)).value = unit_price
+                                    ws_sheet0.range('E' + str(idx)).value = total_price
+
+
+                        ### 下面对每个合同内的表格做一个统计汇总
+
+                        if str(Class) == 'nan':
+                            FileNameStr_result_payment = '_' + task + pre_Ver + item2 + '_尾款付款.xlsx'
+                            FileNameStr_result_payment_old = '_' + task + pre_Ver + item2 + '_尾款付款_old.xlsx'
+                        else:
+                            FileNameStr_result_payment = Class + '_' + task + pre_Ver + item2 + '_尾款付款.xlsx'
+                            FileNameStr_result_payment_old = Class + '_' + task + pre_Ver + item2 + '_尾款付款_old.xlsx'
+
+                        if not os.path.exists(FolderNameStr_result + task + pre_Ver + '付款单/'):
+                            os.makedirs(FolderNameStr_result + task + pre_Ver + '付款单/')
+                        if os.path.exists(
+                                FolderNameStr_result + task + pre_Ver + '付款单/' + FileNameStr_result_payment):
+                            if os.path.exists(
+                                    FolderNameStr_result + task + pre_Ver + '付款单/' + FileNameStr_result_payment_old):
+                                os.remove(
+                                    FolderNameStr_result + task + pre_Ver + '付款单/' + FileNameStr_result_payment_old)
+                            os.rename(FolderNameStr_result + task + pre_Ver + '付款单/' + FileNameStr_result_payment,
+                                      FolderNameStr_result + task + pre_Ver + '付款单/' + FileNameStr_result_payment_old)
+
+                        needPay = 0
+                        if function2 ==0:
+                            if payment_infor == '预付30%+票到30天':
+                                ws_sheet0.range('C' + str(29 + offset)).value = '70%尾款'
+                                ws_sheet0.range('F' + str(29 + offset)).value = int(
+                                    ws_sheet0.range('F' + str(18 + offset)).value) * 0.7
+                                # wb.save(FolderNameStr_result + task + '付款单/'+ FileNameStr_result_payment)
+                                my_wbsave(wb,
+                                          FolderNameStr_result + task + pre_Ver + '付款单/' + FileNameStr_result_payment)
+                                print(task + '_' + item2 + '=====需要70%尾款0')
+                                needPay = 1
+
+                            elif payment_infor == '预付30 %，付清尾款发货':
+                                ws_sheet0.range('C' + str(29 + offset)).value = '70%尾款'
+                                ws_sheet0.range('F' + str(29 + offset)).value = int(
+                                    ws_sheet0.range('F' + str(18 + offset)).value) * 0.7
+                                # wb.save(FolderNameStr_result + task + '付款单/'+ FileNameStr_result_payment)
+                                my_wbsave(wb,
+                                          FolderNameStr_result + task + pre_Ver + '付款单/' + FileNameStr_result_payment)
+                                print(task + '_' + item2 + '======需要70%尾款，全款发货')
+                                needPay = 1
+
+                        if function2 == 1:
+                            if payment_infor != '款到发货' and sum_total_price >= 20000:
+                                ws_sheet0.range('C' + str(29 + offset)).value = '70%尾款'
+                                ws_sheet0.range('F' + str(29 + offset)).value = int(
+                                    ws_sheet0.range('F' + str(18 + offset)).value) * 0.7
+                                # wb.save(FolderNameStr_result + task + '付款单/'+ FileNameStr_result_payment)
+                                my_wbsave(wb,
+                                          FolderNameStr_result + task + pre_Ver + '付款单/' + FileNameStr_result_payment)
+
+                                print(task + '_' + item2 + '=====需要70%尾款1')
+                                needPay = 1
+                            else:
+                                needPay =0
+
+                        #### 在付款统计清单里加上一条
+                        '''if needPay == 1:
+                            wc_sheet0.range('E' + str(6 + k)).value = ws_sheet0.range(
+                                'F' + str(29 + offset)).value  # 付款金额
+                            wc_sheet0.range('B' + str(6 + k)).value = supplier_infor['供应商名称']  # 供应商名称
+                            wc_sheet0.range('F' + str(6 + k)).value = ws_sheet0.range('C29').value  # 付款方式
+                            if item2_df.shape[0] > 1:
+                                # print(str(6 + k))
+                                # print(item2_df.shape[0])
+                                # print(str(ws_sheet0.range('A8').value))
+                                wc_sheet0.range('C' + str(6 + k)).value = str(
+                                    ws_sheet0.range('A8').value) + '  等' + str(item2_df.shape[0]) + '种产品'
+                            else:
+                                wc_sheet0.range('C' + str(6 + k)).value = ws_sheet0.range('A8').value
+                            wc_sheet0.range('D' + str(6 + k)).value = item2_df.shape[0]
+                        j = j + 1
+                        k = k + 1'''
+
+                        wb.close()
 
             ###  存储合同和付款单统计清单
             if function ==0:
@@ -444,7 +637,7 @@ def OutsourcingContract_gen(Target_Task,pd_Quote_Infor,pd_Supplier_Infor,
                  FileNameStr_Pyament,
                  FolderNameStr_result,
                  Techreq_file,
-                 TimeStr,VersionCtl,Ver,function):   # funciton: 0: 合同生成； 1：付款单生成
+                 TimeStr,VersionCtl,Ver,function,function2):   # funciton: 0: 合同生成； 1：付款单生成
     app = xw.App(visible=False, add_book=False)
     app.display_alerts = False
     app.screen_updating = False  # 是否实时刷新excel程序的显示内容
@@ -494,6 +687,8 @@ def OutsourcingContract_gen(Target_Task,pd_Quote_Infor,pd_Supplier_Infor,
                         offset = 15
                     supplier_infor = supplier_infor.iloc[0,:]
                     payment_infor = supplier_infor['账期']
+                    sum_total_price = 0
+
                     for i in range(item2_df.shape[0]):  ## for 每个生产计划单的每一个供应商对应的多个物料：
                         ERP = pd_Quote_Infor.loc[item2_df.index[i],'ERP编码']
 
@@ -502,6 +697,7 @@ def OutsourcingContract_gen(Target_Task,pd_Quote_Infor,pd_Supplier_Infor,
                         num = pd_Quote_Infor.loc[item2_df.index[i],'报价数量']
                         unit_price = pd_Quote_Infor.loc[item2_df.index[i], '单价（元）']
                         total_price = pd_Quote_Infor.loc[item2_df.index[i], '小计']
+                        sum_total_price = total_price + sum_total_price
                         if num != None and str(num) != 'nan' and num > 0:
                             if function == 0:  # 合同生成
                                 Tech_str = Tech_require(ERP,Techreq_file)
@@ -621,6 +817,20 @@ def OutsourcingContract_gen(Target_Task,pd_Quote_Infor,pd_Supplier_Infor,
                                     ws_sheet0.range('B'+str(idx)).value = num
                                     ws_sheet0.range('C'+str(idx)).value = unit_price
                                     ws_sheet0.range('E'+str(idx)).value = total_price
+                    if function2 == 1:
+                        if function == 0:  # 合同生成
+                            for i in range(item2_df.shape[0]):  ## for 每个生产计划单的每一个供应商对应的多个物料：
+                                idx = 12 + i
+                                Class = pd_Quote_Infor.loc[item2_df.index[i], '供应商类别']
+                                # 交期
+                                if str(Class) == 'mechanic':
+                                    deliverTime = 21
+                                else:
+                                    deliverTime = 14
+                                if sum_total_price < 20000:
+                                    ws_sheet0.range('H' + str(idx)).value = '款到发货'
+                                elif payment_infor != '款到发货':
+                                    ws_sheet0.range('H' + str(idx)).value = '预付款后' + str(deliverTime) + '天'
 
                     ### 下面对每个合同内的表格做一个统计汇总
                     if function ==0:  # 合同生成
@@ -662,7 +872,15 @@ def OutsourcingContract_gen(Target_Task,pd_Quote_Infor,pd_Supplier_Infor,
                             ws_sheet0.range('H12').value = '合同签订后' + str(deliverTime) + '天'
                             ws_sheet0.range('B' + str(48 + 5)).value = '合同签订后' + str(deliverTime) + '天发货'
 
-
+                        if function2 == 1:
+                            if sum_total_price < 20000:
+                                ws_sheet0.range('B' + str(42 + offset)).value = '款到发货'
+                                ws_sheet0.range('H12').value = '款到发货'
+                                ws_sheet0.range('B' + str(36 + offset)).value = '款到发货'
+                            elif payment_infor != '款到发货':
+                                ws_sheet0.range('B' + str(42 + offset)).value = '30%预付款，货到票到月结'
+                                ws_sheet0.range('H12').value = '预付款后' + str(deliverTime) + '天'
+                                ws_sheet0.range('B' + str(36 + offset)).value = '预付款后' + str(deliverTime) + '天发货'
 
 
                         if str(Class) == 'nan' :
@@ -709,6 +927,7 @@ def OutsourcingContract_gen(Target_Task,pd_Quote_Infor,pd_Supplier_Infor,
                             os.rename(FolderNameStr_result + task + pre_Ver+'付款单/'+ FileNameStr_result_payment,FolderNameStr_result + task + pre_Ver+'付款单/'+ FileNameStr_result_payment_old)
 
                         needPay =0
+
                         if payment_infor == '预付30%+票到30天':
                             ws_sheet0.range('C' + str(29 + offset)).value = '30%预付款'
                             ws_sheet0.range('F' + str(29 + offset)).value = int(ws_sheet0.range('F' + str(18 + offset)).value) * 0.3
@@ -734,7 +953,26 @@ def OutsourcingContract_gen(Target_Task,pd_Quote_Infor,pd_Supplier_Infor,
                             print(task + '_' + item2 + '不需要预付款')
                             k = k-1
 
+                        if function2 == 1:
+                            if sum_total_price < 20000:
+                                ws_sheet0.range('C' + str(29 + offset)).value = '全款，款到发货'
+                                ws_sheet0.range('F' + str(29 + offset)).value = ws_sheet0.range(
+                                    'F' + str(18 + offset)).value
+                                # wb.save(FolderNameStr_result + task + '付款单/'+ FileNameStr_result_payment)
+                                my_wbsave(wb,
+                                          FolderNameStr_result + task + pre_Ver + '付款单/' + FileNameStr_result_payment)
+                                print(task + '_' + item2 + '=====需要付全款')
+                                needPay = 1
 
+                            elif payment_infor != '款到发货':
+                                ws_sheet0.range('C' + str(29 + offset)).value = '30%预付款'
+                                ws_sheet0.range('F' + str(29 + offset)).value = int(
+                                    ws_sheet0.range('F' + str(18 + offset)).value) * 0.3
+                                # wb.save(FolderNameStr_result + task + '付款单/'+ FileNameStr_result_payment)
+                                my_wbsave(wb,
+                                          FolderNameStr_result + task + pre_Ver + '付款单/' + FileNameStr_result_payment)
+                                print(task + '_' + item2 + '=====需要30%预付款')
+                                needPay = 1
                         #### 在付款统计清单里加上一条
                         if needPay ==1:
                             wc_sheet0.range('E' + str(6 + k)).value = ws_sheet0.range('F' + str(29 + offset)).value  # 付款金额
@@ -756,6 +994,138 @@ def OutsourcingContract_gen(Target_Task,pd_Quote_Infor,pd_Supplier_Infor,
 
                     wb.close()
 
+                    # 对于需要尾款支付的项目，再次打开付款模版并生成尾款付款单
+                    if function == 1:
+                        wb = app.books.open(FolderNameStr + FileNameStr_Pyament)
+                        ws_sheet0 = wb.sheets[0]
+                        offset = 15
+
+                        # supplier_infor = supplier_infor.iloc[0, :]
+                        # payment_infor = supplier_infor['账期']
+
+                        sum_total_price = 0
+                        for i in range(item2_df.shape[0]):  ## for 每个生产计划单的每一个供应商对应的多个物料：
+                            ERP = pd_Quote_Infor.loc[item2_df.index[i], 'ERP编码']
+                            Type = pd_Quote_Infor.loc[item2_df.index[i], '型号']
+                            Type2 = pd_Quote_Infor.loc[item2_df.index[i], '规格']
+                            Class = pd_Quote_Infor.loc[item2_df.index[i], '供应商类别']
+                            num = pd_Quote_Infor.loc[item2_df.index[i], '报价数量']
+                            unit_price = pd_Quote_Infor.loc[item2_df.index[i], '单价（元）']
+                            total_price = pd_Quote_Infor.loc[item2_df.index[i], '小计']
+                            sum_total_price = total_price + sum_total_price
+                            if num != None and str(num) != 'nan' and num > 0:
+                                if i == 0:
+                                    infor0 = supplier_infor['供应商名称']
+                                    if str(supplier_infor['开户行']) != 'nan':
+                                        infor5 = str(supplier_infor['开户行'])
+                                    else:
+                                        infor5 = '需补充对方开户行信息'
+
+                                    if str(supplier_infor['账号']) != 'nan':
+                                        infor6 = str(supplier_infor['账号'])
+                                    else:
+                                        infor6 = ''
+
+                                    ws_sheet0.range('A' + str(30 + offset)).value = infor0
+                                    ws_sheet0.range('A' + str(31 + offset)).value = infor5
+                                    ws_sheet0.range('A' + str(32 + offset)).value = infor6
+                                    ws_sheet0.range('D' + str(29 + offset)).value = TimeStr
+                                    ws_sheet0.range('C' + str(35 + offset)).value = task
+                                    if 'RW' in task:
+                                        ws_sheet0.range('C' + str(34 + offset)).value = '计划部生产计划单'
+                                    elif 'YF' in task:
+                                        ws_sheet0.range('C' + str(34 + offset)).value = '计划部研发计划单'
+                                    elif 'GC' in task:
+                                        ws_sheet0.range('C' + str(34 + offset)).value = '工程部工程计划单'
+                                    else:
+                                        ws_sheet0.range('C' + str(34 + offset)).value = ''
+                                    ws_sheet0.range('A8').value = Type
+                                    ws_sheet0.range('B8').value = num
+                                    ws_sheet0.range('C8').value = unit_price
+                                    ws_sheet0.range('E8').value = total_price
+                                else:
+
+                                    idx = 8 + i
+                                    ws_sheet0.range('A' + str(idx)).value = Type
+                                    ws_sheet0.range('B' + str(idx)).value = num
+                                    ws_sheet0.range('C' + str(idx)).value = unit_price
+                                    ws_sheet0.range('E' + str(idx)).value = total_price
+
+                        ### 下面对每个合同内的表格做一个统计汇总
+
+                        if str(Class) == 'nan':
+                            FileNameStr_result_payment = '_' + task + pre_Ver + item2 + '_尾款付款.xlsx'
+                            FileNameStr_result_payment_old = '_' + task + pre_Ver + item2 + '_尾款付款_old.xlsx'
+                        else:
+                            FileNameStr_result_payment = Class + '_' + task + pre_Ver + item2 + '_尾款付款.xlsx'
+                            FileNameStr_result_payment_old = Class + '_' + task + pre_Ver + item2 + '_尾款付款_old.xlsx'
+
+                        if not os.path.exists(FolderNameStr_result + task + pre_Ver + '付款单/'):
+                            os.makedirs(FolderNameStr_result + task + pre_Ver + '付款单/')
+                        if os.path.exists(
+                                FolderNameStr_result + task + pre_Ver + '付款单/' + FileNameStr_result_payment):
+                            if os.path.exists(
+                                    FolderNameStr_result + task + pre_Ver + '付款单/' + FileNameStr_result_payment_old):
+                                os.remove(
+                                    FolderNameStr_result + task + pre_Ver + '付款单/' + FileNameStr_result_payment_old)
+                            os.rename(FolderNameStr_result + task + pre_Ver + '付款单/' + FileNameStr_result_payment,
+                                      FolderNameStr_result + task + pre_Ver + '付款单/' + FileNameStr_result_payment_old)
+
+                        needPay = 0
+                        if function2 == 0:
+                            if payment_infor == '预付30%+票到30天':
+                                ws_sheet0.range('C' + str(29 + offset)).value = '70%尾款'
+                                ws_sheet0.range('F' + str(29 + offset)).value = int(
+                                    ws_sheet0.range('F' + str(18 + offset)).value) * 0.7
+                                # wb.save(FolderNameStr_result + task + '付款单/'+ FileNameStr_result_payment)
+                                my_wbsave(wb,
+                                          FolderNameStr_result + task + pre_Ver + '付款单/' + FileNameStr_result_payment)
+                                print(task + '_' + item2 + '=====需要70%尾款0')
+                                needPay = 1
+
+                            elif payment_infor == '预付30 %，付清尾款发货':
+                                ws_sheet0.range('C' + str(29 + offset)).value = '70%尾款'
+                                ws_sheet0.range('F' + str(29 + offset)).value = int(
+                                    ws_sheet0.range('F' + str(18 + offset)).value) * 0.7
+                                # wb.save(FolderNameStr_result + task + '付款单/'+ FileNameStr_result_payment)
+                                my_wbsave(wb,
+                                          FolderNameStr_result + task + pre_Ver + '付款单/' + FileNameStr_result_payment)
+                                print(task + '_' + item2 + '======需要70%尾款，全款发货')
+                                needPay = 1
+
+                        if function2 == 1:
+                            if payment_infor != '款到发货' and sum_total_price >= 20000:
+                                ws_sheet0.range('C' + str(29 + offset)).value = '70%尾款'
+                                ws_sheet0.range('F' + str(29 + offset)).value = int(
+                                    ws_sheet0.range('F' + str(18 + offset)).value) * 0.7
+                                # wb.save(FolderNameStr_result + task + '付款单/'+ FileNameStr_result_payment)
+                                my_wbsave(wb,
+                                          FolderNameStr_result + task + pre_Ver + '付款单/' + FileNameStr_result_payment)
+
+                                print(task + '_' + item2 + '=====需要70%尾款1')
+                                needPay = 1
+                            else:
+                                needPay = 0
+
+                        #### 在付款统计清单里加上一条
+                        '''if needPay == 1:
+                            wc_sheet0.range('E' + str(6 + k)).value = ws_sheet0.range(
+                                'F' + str(29 + offset)).value  # 付款金额
+                            wc_sheet0.range('B' + str(6 + k)).value = supplier_infor['供应商名称']  # 供应商名称
+                            wc_sheet0.range('F' + str(6 + k)).value = ws_sheet0.range('C29').value  # 付款方式
+                            if item2_df.shape[0] > 1:
+                                # print(str(6 + k))
+                                # print(item2_df.shape[0])
+                                # print(str(ws_sheet0.range('A8').value))
+                                wc_sheet0.range('C' + str(6 + k)).value = str(
+                                    ws_sheet0.range('A8').value) + '  等' + str(item2_df.shape[0]) + '种产品'
+                            else:
+                                wc_sheet0.range('C' + str(6 + k)).value = ws_sheet0.range('A8').value
+                            wc_sheet0.range('D' + str(6 + k)).value = item2_df.shape[0]
+                        j = j + 1
+                        k = k + 1'''
+
+                        wb.close()
 
 
             ###  存储合同和付款单统计清单
@@ -882,11 +1252,10 @@ def Check_quote_info(pd_Quote_Infor,pd_Supplier_Infor):
 
 
 def main():
-
-
+    function2 = 1  # function2 : 0, 普通订单； 1：海华订单
     ####### 导入询价结果
     FolderNameStr = './Purchase_Rawdata/23询价结果/'
-    Quote_result = '合并汇总表-版本40-20220210'
+    Quote_result = '合并汇总表-版本45-20220216A'
 
     FileNameStr = Quote_result + '.xlsx'
     pd_Quote_Infor = pd.DataFrame(pd.read_excel(FolderNameStr + FileNameStr, sheet_name='操作'))
@@ -896,12 +1265,12 @@ def main():
 
     ####### 导入供应商信息
     FolderNameStr = './Purchase_Rawdata/22供应商档案/'
-    FileNameStr = '供应商档案 35-20220209.xlsx'
+    FileNameStr = '供应商档案 38-20220216.xlsx'
     pd_Supplier_Infor = pd.DataFrame(pd.read_excel(FolderNameStr + FileNameStr))
 
     ####### 导入工艺文件
     FolderNameStr0 = './Purchase_Rawdata/30工艺要求/'
-    FileNameStr0 = '焊接工艺要求20220210.xls'
+    FileNameStr0 = '焊接工艺要求20220216.xls'
 
     ####### 打开合同模版
     FolderNameStr = './Purchase_Rawdata/'
@@ -931,37 +1300,162 @@ def main():
     #Tasklist = ['RW202111-I-1']
     #Tasklist = ['YF202110-A','RW202107-B-1','RW202108-A-1','RW202108-B-4','RW202108-D-1','RW202111-I','RW202111-A']
     Tasklist = [
-                  'RW202201-A-2',
-                  'RW202201-A-3',
-                  'RW202201-A-4',
-                  'RW202201-A-8',
-                  'RW202201-B-1',
-                  'RW202201-B-2',
-                  'RW202201-B-3',
-                  'RW202201-C-2',
-                  'RW202201-C-3',
-                  'RW202201-C-6',
-                  'RW202201-D'
+           'RW202111-I',
+           'RW202111-L',
+           'RW202201-A-1',
+           'RW202201-A-4',
+           'RW202201-A-5',
+           'RW202201-A-6',
+           'RW202201-A-7',
+           'RW202201-A-8',
+           'RW202201-B-1',
+           'RW202201-B-2',
+           'RW202201-B-3',
+           'RW202201-B-4',
+           'RW202201-C-6',
+           'RW202201-C-7',
+           'RW202201-D'
         ]
 
     Verlist = [
-        8,
-        7,
-        5,
-        3,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1
+        10,
+         6,
+        11,
+         6,
+         7,
+         1,
+         2,
+         6,
+         4,
+         3,
+         4,
+         1,
+         3,
+         3,
+         4
 
-    ]   # 0: 没有Version
+   ]    # 0: 没有Version
+    '''Tasklist = [
+                #'RW202201-A-1',
+                #'RW202201-A-1',
+                #'RW202201-A-1',
+                #'RW202201-A-1',
+                #'RW202201-A-1',
+                #'RW202201-A-1',
+                #'RW202201-A-1',
+                #'RW202201-A-1',
+                #'RW202201-A-1',
+                #'RW202201-A-1',
+
+                #'RW202201-A-2',
+                #'RW202201-A-2',
+                #'RW202201-A-2',
+                #'RW202201-A-2',
+                #'RW202201-A-2',
+                #'RW202201-A-2',
+                #'RW202201-A-2',
+                #'RW202201-A-2',
+                #'RW202201-A-2',
+
+                #'RW202201-A-3',
+                #'RW202201-A-3',
+                #'RW202201-A-3',
+                #'RW202201-A-3',
+                #'RW202201-A-3',
+                #'RW202201-A-3',
+                #'RW202201-A-3',
+                #'RW202201-A-3',
+
+                #'RW202201-A-4',
+                #'RW202201-A-4',
+                #'RW202201-A-4',
+                #'RW202201-A-4',
+                #'RW202201-A-4',
+                #'RW202201-A-4',
+
+                #'RW202201-A-5',
+                #'RW202201-A-5',
+                #'RW202201-A-5',
+                #'RW202201-A-5',
+                #'RW202201-A-5',
+                #'RW202201-A-5',
+
+                #'RW202201-A-6',
+                #
+                #'RW202201-A-7',
+                #'RW202201-A-7',
+                #
+                #'RW202201-A-8',
+                #'RW202201-A-8',
+                #'RW202201-A-8',
+                #'RW202201-A-8',
+                #'RW202201-A-8',
+                #
+                #'RW202201-B-1',
+                #'RW202201-B-1',
+                #'RW202201-B-1',
+                #
+                #'RW202201-B-2',
+                #'RW202201-B-2',
+                #
+                #'RW202201-B-3',
+                #'RW202201-B-3',
+                #'RW202201-B-3',
+                #
+                #'RW202201-C-1',
+                #'RW202201-C-1',
+                #'RW202201-C-1',
+                #
+                #'RW202201-C-2',
+                #'RW202201-C-2',
+                #'RW202201-C-2',
+                #
+                #'RW202201-C-3',
+                #'RW202201-C-3',
+                #
+                #'RW202201-C-4',
+                #
+                #'RW202201-C-5',
+                #'RW202201-C-5',
+                #
+                #'RW202201-C-6',
+                #'RW202201-C-6',
+                #'RW202201-C-6',
+                #
+                #'RW202201-C-7',
+                #'RW202201-C-7',
+                #'RW202201-C-7',
+                
+                'RW202201-D',
+                'RW202201-D',
+                'RW202201-D' 
+                ]
+    Verlist = [#0,1,2,3,4,5,6,7,8,9,
+               #0,1,2,3,4,5,6,7,8,
+               #0,1,2,3,4,5,6,7,
+               #0,1,2,3,4,5,
+               #0,1,2,3,4,5,6,
+               #0,                 #A6
+               #0,1,               #A7
+               #0,1,2,3,4,         #A8
+               #
+               #0,1,2, #B1
+               #0,1,   #B2
+               #0,1,2, #B3
+               #0,1,2, #C1
+               #0,1,2, #C2
+               #0,1,       #C3
+               #0,      #C4
+               #0,1,   #C5
+               #0,1,2, #C6
+               #0,1,2, #C7
+               0,1,2
+              ]'''
+   
 
     for i in range(len(Tasklist)):
 
-        if Verlist[i] ==0:
+        if Verlist[i] == -1:
             VersionCtl = 0  # 0: 生成整个项目的合同； 1：之生成对应的Ver
         else:
             VersionCtl = 1
@@ -982,14 +1476,14 @@ def main():
                              FileNameStr_Contract0, FileNameStr_Contract1, FileNameStr_Contract2,
                              FileNameStr_Pyament, FileNameStr_Pyament1, FileNameStr_Pyament2,
                              FolderNameStr_result,
-                             TimeStr, VersionCtl, Ver, function)
+                             TimeStr, VersionCtl, Ver, function,function2)
                 function = 1  # 采购付款单生成
                 PurchaseContract_gen(Target_Task, pd_Quote_Infor_purchase, pd_Supplier_Infor,
                              FolderNameStr, FileNameStr_ContractList, FileNameStr_PyamentList,
                              FileNameStr_Contract0, FileNameStr_Contract1, FileNameStr_Contract2,
                              FileNameStr_Pyament, FileNameStr_Pyament1, FileNameStr_Pyament2,
                              FolderNameStr_result,
-                             TimeStr, VersionCtl, Ver, function)
+                             TimeStr, VersionCtl, Ver, function,function2)
 
             if not pd_Quote_Infor_Outsourcing.empty:
                 function = 0  # 委外合同生成
@@ -999,7 +1493,7 @@ def main():
                                         FileNameStr_Pyament1,
                                         FolderNameStr_result,
                                         FolderNameStr0+FileNameStr0,
-                                        TimeStr, VersionCtl, Ver, function)
+                                        TimeStr, VersionCtl, Ver, function,function2)
 
                 function = 1  # 委外付款单生成
                 OutsourcingContract_gen(Target_Task, pd_Quote_Infor_Outsourcing, pd_Supplier_Infor,
@@ -1008,7 +1502,7 @@ def main():
                                         FileNameStr_Pyament1,
                                         FolderNameStr_result,
                                         FolderNameStr0 + FileNameStr0,
-                                        TimeStr, VersionCtl, Ver, function)
+                                        TimeStr, VersionCtl, Ver, function,function2)
 
 if __name__ == "__main__":
         main()
