@@ -1,8 +1,11 @@
 import pandas as pd
+import sys
 import os
 import time
 import shutil
 import rd_DataBase
+import copy
+
 
 ### 本程序根据在产计划单以及对应的BOM，生成：
 ##  1）每一个在产计划单的BOM库存-采购分析清单（按照BOM文件的格式）
@@ -20,8 +23,11 @@ def Remove_Items_BOMandStock(Prj,Parent_ERP,pd_BOM,pd_VirtualStock):
             Qty_inStock = pd_inStock.iat[0, 0]
             tst = pd_VirtualStock[pd_VirtualStock.ERP.str.contains(ERP).fillna(False)]
             tst2 = pd_BOM[pd_BOM.loc[:, '子件编码(cpscode)'].str.contains(ERP).fillna(False)]
-            #if Qty_inStock == '5,365.00':
-            #    print(num)
+            #if isinstance(Qty_inStock, str):
+                #print(num)
+                #Qty_inStock = float(Qty_inStock)
+                #print(Qty_inStock)
+            #如果在此处碰到了数据类型str的错误，需要在WPS里将数据从文本转换成数据格式。具体参考Notion里的记录
             if Qty_inStock >= num:
                 pd_VirtualStock.at[tst.index, 'Qty'] = tst.iat[0, 0] - num
                 pd_BOM.at[tst2.index, '需新增采购量'] = 0
@@ -47,8 +53,30 @@ def Remove_Items_BOMandStock(Prj,Parent_ERP,pd_BOM,pd_VirtualStock):
             pd_BOM.at[tst2.index, '基本用量分母(tdqtyd)'] = '无ERP库存信息'
     return pd_BOM, pd_VirtualStock
 
+def Remove_Items_BOMandSpecialOrder(Task_list_index,pd_BOM,pd_SpecialPrj_PreOrdered):
+    # 从之前预投产的特殊备货生产计划单中，减除半成品
+    pd_BOM.dropna(axis=0,how='all')
+    for i in range(pd_BOM.shape[0]):
+        ERP = pd_BOM.loc[pd_BOM.index[i], '子件编码(cpscode)']
+        num = pd_BOM.loc[pd_BOM.index[i], '任务单总需求量']
+        pd_inPreOrdered = pd_SpecialPrj_PreOrdered[pd_SpecialPrj_PreOrdered['物料编码'].str.contains(ERP).fillna(False)]
+        if not pd_inPreOrdered.empty:
+            for j in range(pd_inPreOrdered.shape[0]):
+                if Task_list_index > pd_inPreOrdered.index[j]:
+                    num_preOrdered = pd_SpecialPrj_PreOrdered.loc[pd_inPreOrdered.index[j],'任务单投产数量']
+                    if num_preOrdered >= num:
+                        num_preOrdered = num_preOrdered - num
+                        num =0
+                    else:
+                        num = num - num_preOrdered
+                        num_preOrdered = 0
+                    pd_SpecialPrj_PreOrdered.at[pd_inPreOrdered.index[j], '任务单投产数量'] = num_preOrdered
+            pd_BOM.at[pd_BOM.index[i], '任务单总需求量'] = num
+
+    return pd_BOM, pd_SpecialPrj_PreOrdered
+
 def Check_ChildERP(pd_BOM,BOM_subfolder):
-    # 列举下层BOM_subfolder下所有子部件的半成品列表
+    # 列举下层BOM_subfolder下所有子部件的半成品列表，并根据上一层的"需新增采购量"，作为当前层的"任务单需求量"
     pd_BOM.dropna(axis=0, how='all')
     for root, dirs, files in os.walk(BOM_subfolder):
         sub_ERPlist = pd.Series(files).apply(lambda x: x.upper().strip('.XLS'))
@@ -80,9 +108,11 @@ def Check_ChildERP(pd_BOM,BOM_subfolder):
 
 
 def clear_ChildERP(BOM_subfolder):
+    # 如果在当前L目录下的BOM文件中，需求数量为0（Virtual_stock里有备货，并已经减除），则直接删除该BOM文件
     for root, dirs, files in os.walk(BOM_subfolder):
         for file in files:
             if os.path.splitext(file)[1].lower() == '.xls':
+                #print(root+file)
                 xls_df = pd.DataFrame(pd.read_excel(root+file))
                 Str1 = '任务单总需求量'
                 if Str1 in xls_df.columns:
@@ -93,8 +123,9 @@ def clear_ChildERP(BOM_subfolder):
                     os.remove(root + file)
                     print(root + file + 'is useless and removed')
 
-def Purchase_Production_BOMgen(pd_PrjList,BOM_folderNameStr, Target_folderNameStr, pd_VirtualStock):
+def Purchase_Production_BOMgen(pd_PrjList,pd_SpecialPrj_PreOrdered,BOM_folderNameStr, Target_folderNameStr, pd_VirtualStock):
     Task_list = pd_PrjList['任务单号']
+    Task_list_index = pd_PrjList.index
     Task_ERP_list = pd_PrjList['物料编码']
     Task_Qty_list = pd_PrjList['任务单投产数量']
     for i in range(0,Task_ERP_list.shape[0]):
@@ -114,15 +145,19 @@ def Purchase_Production_BOMgen(pd_PrjList,BOM_folderNameStr, Target_folderNameSt
                     pd_BOML1 = xls_df[
                         ['母件编码 *(cpspcode)H','母件名称 *(cinvname)H','子件编码(cpscode)','子件名称(cinvname)','规格型号(cinvstd)',
                          '主计量单位(ccomunitname)','基本用量分子(ipsquantity)','基本用量分母(tdqtyd)']]
-                    pd_BOML1['任务单总需求量'] = pd_BOML1.apply(lambda x: x['基本用量分子(ipsquantity)'] * Qty, axis=1)
+                    num_totalneed = pd_BOML1.apply(lambda x: x['基本用量分子(ipsquantity)'] * Qty, axis=1)
+                    pd_BOML1['任务单总需求量'] = copy.copy(num_totalneed)
                     pd_BOML1['需新增采购量'] = None
                     pd_BOML1['是否为半成品'] = None
+                    pd_BOML1, pd_SpecialPrj_PreOrdered = Remove_Items_BOMandSpecialOrder(Task_list_index[i], pd_BOML1,
+                                                                                         pd_SpecialPrj_PreOrdered)
                     pd_BOML1, pd_VirtualStock = Remove_Items_BOMandStock(Task_list[i],Task_ERP_list[i],pd_BOML1,pd_VirtualStock)
+                    pd_BOML1['任务单总需求量'] = num_totalneed
                     if os.path.exists(Result_subfolder + 'L2/'):
                         pd_BOML1 = Check_ChildERP(pd_BOML1,Result_subfolder + 'L2/')
                     pd_BOML1.to_excel(Result_subfolder + 'L1/' + file.lower())
         # 处理L2_L3目录下的文件
-        print(Result_subfolder)
+        #print(Result_subfolder)
         if os.path.exists(Result_subfolder + 'L2/'):
             clear_ChildERP(Result_subfolder + 'L2/')
             for root, dirs, files in os.walk(Result_subfolder + 'L2/'):
@@ -132,8 +167,11 @@ def Purchase_Production_BOMgen(pd_PrjList,BOM_folderNameStr, Target_folderNameSt
                         pd_BOML2 = xls_df
                         pd_BOML2['需新增采购量'] = None
                         pd_BOML2['是否为半成品'] = None
+                        num_totalneed = copy.copy(pd_BOML2['任务单总需求量'])
+                        pd_BOML2,pd_SpecialPrj_PreOrdered = Remove_Items_BOMandSpecialOrder(Task_list_index[i],pd_BOML2,pd_SpecialPrj_PreOrdered)
                         pd_BOML2, pd_VirtualStock = Remove_Items_BOMandStock(Task_list[i], file.upper().strip('.XLS'), pd_BOML2,
                                                                              pd_VirtualStock)
+                        pd_BOML2['任务单总需求量'] = num_totalneed
                         if os.path.exists(Result_subfolder + 'L3/'):
                             pd_BOML2 = Check_ChildERP(pd_BOML2, Result_subfolder + 'L3/')
                         pd_BOML2.to_excel(Result_subfolder + 'L2/' + file.lower())
@@ -148,7 +186,12 @@ def Purchase_Production_BOMgen(pd_PrjList,BOM_folderNameStr, Target_folderNameSt
                         pd_BOML3 = xls_df
                         pd_BOML3['需新增采购量'] = None
                         pd_BOML3['是否为半成品'] = None
+                        num_totalneed = copy.copy(pd_BOML3['任务单总需求量'])
+                        pd_BOML3, pd_SpecialPrj_PreOrdered = Remove_Items_BOMandSpecialOrder(Task_list_index[i],
+                                                                                             pd_BOML3,
+                                                                                             pd_SpecialPrj_PreOrdered)
                         pd_BOML3, pd_VirtualStock = Remove_Items_BOMandStock(Task_list[i], file.upper().strip('.XLS'), pd_BOML3, pd_VirtualStock)
+                        pd_BOML3['任务单总需求量'] = num_totalneed
                         if os.path.exists(Result_subfolder + 'L4/'):
                             pd_BOML3 = Check_ChildERP(pd_BOML3, Result_subfolder + 'L4/')
                         pd_BOML3.to_excel(Result_subfolder + 'L3/' + file.lower())
@@ -162,7 +205,12 @@ def Purchase_Production_BOMgen(pd_PrjList,BOM_folderNameStr, Target_folderNameSt
                         pd_BOML4 = xls_df
                         pd_BOML4['需新增采购量'] = None
                         pd_BOML4['是否为半成品'] = None
+                        num_totalneed = copy.copy(pd_BOML4['任务单总需求量'])
+                        pd_BOML4, pd_SpecialPrj_PreOrdered = Remove_Items_BOMandSpecialOrder(Task_list_index[i],
+                                                                                             pd_BOML4,
+                                                                                             pd_SpecialPrj_PreOrdered)
                         pd_BOML4, pd_VirtualStock = Remove_Items_BOMandStock(Task_list[i], file.upper().strip('.XLS'), pd_BOML4, pd_VirtualStock)
+                        pd_BOML4['任务单总需求量'] = num_totalneed
                         if os.path.exists(Result_subfolder + 'L5/'):
                             pd_BOML4 = Check_ChildERP(pd_BOML4, Result_subfolder + 'L5/')
                         pd_BOML4.to_excel(Result_subfolder + 'L4/' + file.lower())
@@ -188,9 +236,9 @@ def Purchase_Production_BOMgen(pd_PrjList,BOM_folderNameStr, Target_folderNameSt
 def PurchaseTable_Gen(pd_PrjList,pd_VirtualStock,Target_folderNameStr):
     Task_list = pd_PrjList['任务单号']
     Task_ERP_list = pd_PrjList['物料编码']
-    data = [['A','A','A',0,0]]
-    pd_PurchaseTable = pd.DataFrame(columns=['生产计划单号','ERP','名称','任务单总需求量','需新增采购量'])
-    pd_PurchaseTable0 = pd.DataFrame(data,columns=['生产计划单号','ERP','名称','任务单总需求量','需新增采购量'])
+    data = [['A','A','A','A',0,0]]
+    pd_PurchaseTable = pd.DataFrame(columns=['生产计划单号','ERP','名称','规格型号','任务单总需求量','需新增采购量'])
+    pd_PurchaseTable0 = pd.DataFrame(data,columns=['生产计划单号','ERP','名称','规格型号','任务单总需求量','需新增采购量'])
     for i in range(0, Task_list.shape[0]):
         Task_folderNameStr = Target_folderNameStr + Task_list[i] + '/'
         # 处理L1_L2目录下的文件
@@ -207,35 +255,46 @@ def PurchaseTable_Gen(pd_PrjList,pd_VirtualStock,Target_folderNameStr):
                                 pd_PurchaseTable0.iat[0,0] = Task_list[i]
                                 pd_PurchaseTable0.iat[0,1] = xls_df.loc[xls_df.index[idx],'子件编码(cpscode)']
                                 pd_PurchaseTable0.iat[0,2] = xls_df.loc[xls_df.index[idx], '子件名称(cinvname)']
-                                pd_PurchaseTable0.iat[0,3] = xls_df.loc[xls_df.index[idx], '任务单总需求量']
-                                pd_PurchaseTable0.iat[0,4] = xls_df.loc[xls_df.index[idx], '需新增采购量']
+                                pd_PurchaseTable0.iat[0, 3] = xls_df.loc[xls_df.index[idx], '规格型号(cinvstd)']
+                                pd_PurchaseTable0.iat[0,4] = xls_df.loc[xls_df.index[idx], '任务单总需求量']
+                                pd_PurchaseTable0.iat[0,5] = xls_df.loc[xls_df.index[idx], '需新增采购量']
                                 pd_PurchaseTable = pd.concat([pd_PurchaseTable,pd_PurchaseTable0])
                         else:
                             pd_PurchaseTable0.iat[0, 0] = Task_list[i]
                             pd_PurchaseTable0.iat[0, 1] = xls_df.loc[xls_df.index[idx], '子件编码(cpscode)']
                             pd_PurchaseTable0.iat[0, 2] = xls_df.loc[xls_df.index[idx], '子件名称(cinvname)']
-                            pd_PurchaseTable0.iat[0, 3] = xls_df.loc[xls_df.index[idx], '任务单总需求量']
-                            pd_PurchaseTable0.iat[0, 4] = xls_df.loc[xls_df.index[idx], '需新增采购量']
+                            pd_PurchaseTable0.iat[0, 3] = xls_df.loc[xls_df.index[idx], '规格型号(cinvstd)']
+                            pd_PurchaseTable0.iat[0, 4] = xls_df.loc[xls_df.index[idx], '任务单总需求量']
+                            pd_PurchaseTable0.iat[0, 5] = xls_df.loc[xls_df.index[idx], '需新增采购量']
                             pd_PurchaseTable = pd.concat([pd_PurchaseTable, pd_PurchaseTable0])
                             #print('test2')
         #print('test1')
     return pd_PurchaseTable
 
-def main():
+def main(argv):
+
+    if argv[0] == 1:
+        arg = 1
+    else:
+        arg =0
 
     TimeStr = time.strftime("%Y-%m-%d-%H_%M", time.localtime(time.time()))
     Target_folderNameStr = './results/' + 'PurchaseBOM_' + TimeStr + '/'
-
-    pd_VirtualStock,pd_PrjList,FileNameStr_PrjList,StockInfor_Filename,FileNameStr_contract,\
+    if arg ==0:
+        pd_VirtualStock,pd_PrjList,FileNameStr_PrjList,StockInfor_Filename,FileNameStr_contract,\
            Contract_FileNameStr1,Contract_FileNameStr2,FileNameStr_outstock,FileNameStr_instock,\
-           FileNameStr_outsourcing,FileNameStr_outsourcingBack = rd_DataBase.Purchase_Rawdata_analyze()
+           FileNameStr_outsourcing,FileNameStr_outsourcingBack = rd_DataBase.Purchase_Rawdata_analyze(None)
+    else:
+        pd_VirtualStock, pd_PrjList, FileNameStr_PrjList, StockInfor_Filename, FileNameStr_contract, \
+        Contract_FileNameStr1, Contract_FileNameStr2, FileNameStr_outstock, FileNameStr_instock, \
+        FileNameStr_outsourcing, FileNameStr_outsourcingBack = rd_DataBase.Purchase_Rawdata_analyze(argv)
 
-
+    pd_SpecialPrj_PreOrdered = pd_PrjList[pd_PrjList['备注']=='特别备货']
     pd_VirtualStock['Comments'] = None
     BOM_folderNameStr = './BOM.nosync/'
     #TimeStr = '2021-06-18-19_18'  # debug
 
-    pd_VirtualStock1 = Purchase_Production_BOMgen(pd_PrjList, BOM_folderNameStr, Target_folderNameStr, pd_VirtualStock)
+    pd_VirtualStock1 = Purchase_Production_BOMgen(pd_PrjList, pd_SpecialPrj_PreOrdered,BOM_folderNameStr, Target_folderNameStr, pd_VirtualStock)
     pd_PurchaseTable = PurchaseTable_Gen(pd_PrjList,pd_VirtualStock1,Target_folderNameStr)
     pd_PurchaseTable1 = pd_PurchaseTable[pd_PurchaseTable['需新增采购量'] >0]
     pd_PurchaseTable1.to_excel(Target_folderNameStr + 'PurchaseTable' + TimeStr  + '.xls')
@@ -249,6 +308,7 @@ def main():
     print('入库信息：' + FileNameStr_instock + '\n', file=f)
     print('委外信息：' + FileNameStr_outsourcing + '\n', file=f)
     print('委外返回信息：' + FileNameStr_outsourcingBack + '\n', file=f)
-
+    if arg == 1:
+        return Target_folderNameStr
 if __name__ == "__main__":
-    main()
+    main(sys.argv)
