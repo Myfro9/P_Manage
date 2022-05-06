@@ -53,7 +53,9 @@
     else:
         PriceInfor_Filename = './Results/RefPrice_byERPnum_202104.xlsx'  # 仅历史采购信息
     PriceInfor_L2L3_Filename ='./Results/PriceInfor_L3L2_V3_0.xlsx'
-  
+历史采购参考价格，通过运行PurchaseinforV2.0.py可以得到，需要更新最新的"合并汇总表"
+
+ 
 ## 拉缺料表
   1. 运行 **Purchase_Production_ListGen.py**，生成缺料表BOM清单Purchase_BOM，运行前需要指定：
   
@@ -138,3 +140,17 @@
     
     -指定生产计划单号
     pd_Task = pd.DataFrame({'Task':[...] })
+
+## BOM更新后，更新采购缺料表，并对已经签订的采购条款进行新增和删除
+运行 **PurchaseBOM_change.py** ，读取以前的缺料表log信息，在当时库存情况的基础上，
+重新按照新的BOM生成缺料表。
+
+    -需要输入需要更新BOM的生产计划单号，从而可以恢复对应的历史库存断点，从而重新生成缺料表
+
+新生成了缺料表后，重新运行 **Quote_gen.py** ，输入对应的生产计划单号， 输入新生成的PurchaseBOM缺料表，
+程序会自动检测到以前曾经生成过该生产计划单的询价表，在生成新的询价表的同时，也会生成对应老的询价表的基础上
+给出增加和删减项。
+    
+    -需要输入生产计划单号，以及新的缺料表信息
+
+
